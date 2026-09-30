@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_adjustments">Настройки изображения</string>
+    <string name="picture_adjustments_hint">Сохраняются сразу, без применения и переподключения. Только главный экран CarPlay. Яркость меняет изображение, а не подсветку. Теплота: отрицательные значения — холоднее, положительные — теплее.</string>
+    <string name="picture_brightness">Яркость</string>
+    <string name="picture_contrast">Контрастность</string>
+    <string name="picture_saturation">Насыщенность</string>
+    <string name="picture_warmth">Теплота</string>
+    <string name="picture_reset">Сбросить изображение</string>
+</resources>
