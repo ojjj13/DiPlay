@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_adjustments">画面调整</string>
+    <string name="picture_adjustments_hint">立即保存，无需点击应用或重新连接。仅调整主屏 CarPlay 画面。亮度不改变屏幕背光。色温：负值偏冷，正值偏暖。</string>
+    <string name="picture_brightness">亮度</string>
+    <string name="picture_contrast">对比度</string>
+    <string name="picture_saturation">饱和度</string>
+    <string name="picture_warmth">色温</string>
+    <string name="picture_reset">重置画面</string>
+</resources>

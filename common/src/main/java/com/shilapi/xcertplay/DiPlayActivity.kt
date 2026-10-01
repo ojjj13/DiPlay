@@ -274,6 +274,17 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
             }
         }
+        section(content, getString(R.string.picture_adjustments), R.drawable.ic_dp_display) { card ->
+            card.addView(label(getString(R.string.picture_adjustments_hint), 14, MUTED))
+            pictureControl(card, R.string.picture_brightness, CarPlayPicture.BRIGHTNESS)
+            pictureControl(card, R.string.picture_contrast, CarPlayPicture.CONTRAST)
+            pictureControl(card, R.string.picture_saturation, CarPlayPicture.SATURATION)
+            pictureControl(card, R.string.picture_warmth, CarPlayPicture.WARMTH)
+            card.addView(button(getString(R.string.picture_reset), false) {
+                CarPlayPicture.preferences(this).edit().clear().apply()
+                render()
+            }, matchButton(12, 56))
+        }
         section(content, getString(R.string.audio_routing)) { card ->
             toggle(card, getString(R.string.contrib_audio_home_toggle_audio_focus), getString(R.string.contrib_audio_home_toggle_audio_focus_desc), AirPlayPersistence.loadAudioFocusEnabled(this)) { AirPlayPersistence.saveAudioFocusEnabled(this, it) }
             if (resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)) {
@@ -1136,6 +1147,32 @@ class DiPlayActivity : ComponentActivity() {
             languageButton.setOnClickListener { AppLocale.showPicker(this) }
             card.addView(languageButton, matchButton(12, 60))
         }
+    }
+
+    private fun pictureControl(parent: LinearLayout, title: Int, key: String) {
+        val prefs = CarPlayPicture.preferences(this)
+        val range = CarPlayPicture.range(key)
+        val current = CarPlayPicture.value(prefs, key)
+        fun valueLabel(value: Int): String = getString(title) + ": " +
+            if (key == CarPlayPicture.CONTRAST || key == CarPlayPicture.SATURATION) "$value%" else "$value"
+        val heading = label(valueLabel(current), 18, TEXT, true)
+        heading.setPadding(0, dp(16), 0, 0)
+        parent.addView(heading)
+        parent.addView(SeekBar(this).apply {
+            max = range.last - range.first
+            progress = current - range.first
+            contentDescription = getString(title)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    val value = progress + range.first
+                    heading.text = valueLabel(value)
+                    prefs.edit().putInt(key, value).apply()
+                }
+                override fun onStartTrackingTouch(bar: SeekBar) = Unit
+                override fun onStopTrackingTouch(bar: SeekBar) = Unit
+            })
+        }, LinearLayout.LayoutParams(-1, dp(56)))
     }
 
     private fun section(parent: LinearLayout, title: String, icon: Int? = null, build: (LinearLayout) -> Unit) {

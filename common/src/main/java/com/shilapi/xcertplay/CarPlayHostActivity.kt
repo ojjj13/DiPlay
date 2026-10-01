@@ -240,6 +240,10 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
 
+    private val picturePreferences by lazy { CarPlayPicture.preferences(this) }
+    private val pictureListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        runOnUiThread { videoView?.let { CarPlayPicture.apply(it, picturePreferences) } }
+    }
     private var videoView: TextureView? = null
     private var gestureOverlay: View? = null
     private var settingsMenu: View? = null
@@ -409,6 +413,7 @@ class CarPlayHostActivity : ComponentActivity() {
         loadPersistedSettings()
         locationPermissionAvailable = hasFineLocationPermission()
         setContentView(buildContentView())
+        picturePreferences.registerOnSharedPreferenceChangeListener(pictureListener)
         applyFullscreenMode()
         onBackPressedDispatcher.addCallback(
             this,
@@ -571,6 +576,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        videoView?.let { CarPlayPicture.apply(it, picturePreferences) }
         val languagePreference = AppLocale.preference(this)
         if (Build.VERSION.SDK_INT < 33 && languagePreference != languagePreferenceAtCreate) {
             languagePreferenceAtCreate = languagePreference
@@ -764,6 +770,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        picturePreferences.unregisterOnSharedPreferenceChangeListener(pictureListener)
         clusterMonitor?.stop()
         dismissClusterPresentation()
         mainHandler.removeCallbacks(applyDisplaySize)
@@ -837,6 +844,7 @@ class CarPlayHostActivity : ComponentActivity() {
         })
         root.addView(panel, FrameLayout.LayoutParams(-1, -1))
         videoView = video
+        CarPlayPicture.apply(video, picturePreferences)
         gestureOverlay = gestureLayer
         stageStatusView = stage
         connectionPanel = panel

@@ -1,0 +1,58 @@
+name: Picture test APK
+on:
+  push:
+    branches: [feature/picture-controls-0.2.8]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check public source
+        run: python3 scripts/check_public_tree.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Prepare upstream preview runtime assets outside the source tree
+        run: |
+          curl --fail --location --retry 3 https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.8/DiPlay-0.2.8.apk --output "$RUNNER_TEMP/upstream.apk"
+          echo "9b36a0866608244e422053d6027706b4672d8f2f4a8be9eb7e612411ffb6bf48  $RUNNER_TEMP/upstream.apk" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/runtime-assets/offline-mfi"
+          for name in identity.pk8 certificate.p7b; do
+            unzip -p "$RUNNER_TEMP/upstream.apk" "assets/offline-mfi/$name" > "$RUNNER_TEMP/runtime-assets/offline-mfi/$name"
+            chmod 600 "$RUNNER_TEMP/runtime-assets/offline-mfi/$name"
+          done
+          echo "DIPLAY_AUTH_ASSETS_DIR=$RUNNER_TEMP/runtime-assets" >> "$GITHUB_ENV"
+      - name: Unit tests, lint and standalone APK
+        run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :mobile:lintDebug :mobile:assembleStandaloneDebug --stacktrace
+      - name: Verify and package
+        run: |
+          mkdir -p delivery
+          cp mobile/build/outputs/apk/debug/mobile-debug.apk delivery/DiPlay-0.2.8-picture-test.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose delivery/DiPlay-0.2.8-picture-test.apk
+          for name in identity.pk8 certificate.p7b; do
+            unzip -p delivery/DiPlay-0.2.8-picture-test.apk "assets/offline-mfi/$name" | cmp - "$DIPLAY_AUTH_ASSETS_DIR/offline-mfi/$name"
+          done
+          cd delivery
+          sha256sum DiPlay-0.2.8-picture-test.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DiPlay-0.2.8-picture-test
+          path: delivery/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: picture-test-reports
+          path: |
+            shared/build/reports/tests/
+            common/build/reports/tests/
+            mobile/build/reports/lint-results-debug.html
