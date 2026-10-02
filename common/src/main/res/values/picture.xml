@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_adjustments">Picture adjustments</string>
+    <string name="picture_adjustments_hint">Saved immediately; no Apply or reconnect needed. Main CarPlay screen only. Brightness changes the image, not the backlight. Warmth: negative = cooler, positive = warmer.</string>
+    <string name="picture_brightness">Brightness</string>
+    <string name="picture_contrast">Contrast</string>
+    <string name="picture_saturation">Saturation</string>
+    <string name="picture_warmth">Warmth</string>
+    <string name="picture_reset">Reset picture</string>
+</resources>

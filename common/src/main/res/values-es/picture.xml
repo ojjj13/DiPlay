@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_adjustments">Ajustes de imagen</string>
+    <string name="picture_adjustments_hint">Se guardan al instante, sin aplicar ni reconectar. Solo afectan a la pantalla principal de CarPlay. El brillo cambia la imagen, no la retroiluminación. Calidez: valores negativos = más frío; positivos = más cálido.</string>
+    <string name="picture_brightness">Brillo</string>
+    <string name="picture_contrast">Contraste</string>
+    <string name="picture_saturation">Saturación</string>
+    <string name="picture_warmth">Calidez</string>
+    <string name="picture_reset">Restablecer imagen</string>
+</resources>

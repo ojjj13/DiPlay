@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picture_adjustments">إعدادات الصورة</string>
+    <string name="picture_adjustments_hint">تُحفظ فورًا دون تطبيق أو إعادة اتصال. لشاشة CarPlay الرئيسية فقط. السطوع يغيّر الصورة وليس الإضاءة الخلفية. الدفء: القيم السالبة أبرد والموجبة أدفأ.</string>
+    <string name="picture_brightness">السطوع</string>
+    <string name="picture_contrast">التباين</string>
+    <string name="picture_saturation">التشبع</string>
+    <string name="picture_warmth">الدفء</string>
+    <string name="picture_reset">إعادة ضبط الصورة</string>
+</resources>
