@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay
 
+import android.graphics.SurfaceTexture
 import android.view.Surface
 import org.junit.Assert.*
 import org.junit.Test
@@ -14,8 +15,10 @@ class ClusterActivityOutputTest {
         val host = Any()
         val oldActivity = Any()
         val newActivity = Any()
-        val first = Surface()
-        val second = Surface()
+        val firstTexture = SurfaceTexture(0)
+        val secondTexture = SurfaceTexture(0)
+        val first = Surface(firstTexture)
+        val second = Surface(secondTexture)
         val events = mutableListOf<Surface?>()
         try {
             ClusterActivityOutput.bind(host, 4) { events.add(it) }
@@ -35,6 +38,7 @@ class ClusterActivityOutputTest {
             ClusterActivityOutput.stop(newHost)
         } finally {
             first.release(); second.release()
+            firstTexture.release(); secondTexture.release()
         }
     }
 }
