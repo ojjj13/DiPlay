@@ -30,7 +30,7 @@ import com.shilapi.xcertplay.host.R
  * Shows CarPlay's instrument-cluster stream on a BYD cluster projection display.
  *
  * BYD exposes the cluster's projection area as public presentation displays owned by
- * com.byd.containerservice; the stock map (com.byd.launchermap) draws there the same way. The
+ * com.byd.containerservice (DiLink 5) or com.xdja.containerservice (DiLink 4). The
  * cluster only shows this display while its projection mode is on, which DiPlay cannot switch.
  */
 internal class ClusterMapPresentation(
@@ -134,13 +134,21 @@ internal class ClusterMapPresentation(
     companion object {
         const val TAG = "DiPlay-Cluster"
 
-        /** A verified 5.1 profile chooses its layer explicitly; other firmware keeps PR #5 behavior. */
+        /** Keep the 5/5.1 selection order, then try the measured DiLink 4 projection display. */
         fun findDisplay(context: Context, theme: DiLink51ClusterLayout.Theme = DiLink51ClusterLayout.theme(context)): Display? {
             val displays = context.getSystemService(DisplayManager::class.java)
                 ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION) ?: return null
             val name = DiLink51ClusterLayout.displayName(
                 displays.map { it.name }, android.os.Build.FINGERPRINT, theme,
-            ) ?: return null
+            )
+            if (name == null) {
+                // Never replace a missing 5.1 side layer with a full-screen display.
+                if (DiLink51ClusterLayout.supported()) return null
+                return displays.firstOrNull { display ->
+                    val size = sizeOf(display)
+                    DiLink4ClusterDisplay.matches(display.name, size.x, size.y)
+                }
+            }
             return displays.firstOrNull { it.name == name }?.takeIf {
                 if (!DiLink51ClusterLayout.supported()) true else {
                     val size = sizeOf(it)
@@ -151,7 +159,10 @@ internal class ClusterMapPresentation(
 
         fun describeDisplays(context: Context): String =
             context.getSystemService(DisplayManager::class.java)?.displays
-                ?.joinToString { "${it.displayId}:${it.name}" }.orEmpty()
+                ?.joinToString {
+                    val size = sizeOf(it)
+                    "${it.displayId}:${it.name} ${size.x}x${size.y} flags=${it.flags} valid=${it.isValid}"
+                }.orEmpty()
 
         fun sizeOf(display: Display): Point = Point().also {
             @Suppress("DEPRECATION")

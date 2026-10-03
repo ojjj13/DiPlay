@@ -678,10 +678,10 @@ class CarPlayHostActivity : ComponentActivity() {
             updateClusterMapShown()
             presentation.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
             Log.i(ClusterMapPresentation.TAG, "cluster presentation shown display=${display.displayId} name=${display.name}")
-            appendLog("Cluster map: presentation shown display=${display.displayId}")
+            appendLog("Cluster map: presentation shown display=${display.displayId} name=${display.name}")
         } catch (error: RuntimeException) {
             Log.w(ClusterMapPresentation.TAG, "cluster presentation failed", error)
-            appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+            appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}: ${error.message}")
         }
     }
 
@@ -712,7 +712,7 @@ class CarPlayHostActivity : ComponentActivity() {
             } catch (error: RuntimeException) {
                 clusterLayers.remove(fullMap)
                 clusterPresentation = null
-                appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+                appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}: ${error.message}")
                 return
             }
         }
@@ -754,6 +754,15 @@ class CarPlayHostActivity : ComponentActivity() {
             val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
             return DiLink51ClusterLayout.streamConfig().also {
                 appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+            }
+        }
+        if (DiLink4ClusterDisplay.matches(display.name, size.x, size.y)) {
+            // DiLink 5 safe-area coordinates have not been measured on this car. Start with
+            // a native-size, uncropped stream and let the stock projection layer place it.
+            return DiLink4ClusterDisplay.streamConfig(
+                AirPlayPersistence.loadClusterContent(this),
+            ).also {
+                appendLog("Cluster map: DiLink 4 candidate display=${display.displayId}; requesting ${it.widthPixels}x${it.heightPixels} url=${it.initialUrl}")
             }
         }
         return CarPlayClusterDisplay.config(

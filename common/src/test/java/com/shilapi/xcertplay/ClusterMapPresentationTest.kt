@@ -18,9 +18,9 @@ class ClusterMapPresentationTest {
     private val context get() = RuntimeEnvironment.getApplication()
     private val manager get() = context.getSystemService(DisplayManager::class.java)
 
-    private fun display(name: String): Int {
+    private fun display(name: String, spec: String = "w960dp-h360dp"): Int {
         // Display.TYPE_VIRTUAL (5) is hidden from the public Android SDK.
-        val id = ShadowDisplayManager.addDisplay("w960dp-h360dp", 5)
+        val id = ShadowDisplayManager.addDisplay(spec, 5)
         shadowOf(manager.getDisplay(id)).apply {
             setName(name)
             setFlags(Display.FLAG_PRESENTATION)
@@ -56,4 +56,43 @@ class ClusterMapPresentationTest {
             ShadowDisplayManager.removeDisplay(other)
         }
     }
+    @Test fun dilink4MeasuredProjectionIsSelected() {
+        val id = display(DiLink4ClusterDisplay.NAME, "w1920dp-h720dp-mdpi")
+        try {
+            assertEquals(id, ClusterMapPresentation.findDisplay(context)?.displayId)
+        } finally {
+            ShadowDisplayManager.removeDisplay(id)
+        }
+    }
+
+    @Test fun dilink4WrongGeometryIsRejected() {
+        val id = display(DiLink4ClusterDisplay.NAME, "w1280dp-h720dp-mdpi")
+        try {
+            assertNull(ClusterMapPresentation.findDisplay(context))
+        } finally {
+            ShadowDisplayManager.removeDisplay(id)
+        }
+    }
+
+    @Test fun dilink4RequiresPresentationFlag() {
+        val id = display(DiLink4ClusterDisplay.NAME, "w1920dp-h720dp-mdpi")
+        shadowOf(manager.getDisplay(id)).setFlags(0)
+        try {
+            assertNull(ClusterMapPresentation.findDisplay(context))
+        } finally {
+            ShadowDisplayManager.removeDisplay(id)
+        }
+    }
+
+    @Test fun existingDilink5DisplayKeepsPriority() {
+        val legacy = display(DiLink4ClusterDisplay.NAME, "w1920dp-h720dp-mdpi")
+        val current = display(DiLink51ClusterLayout.BASE)
+        try {
+            assertEquals(current, ClusterMapPresentation.findDisplay(context)?.displayId)
+        } finally {
+            ShadowDisplayManager.removeDisplay(current)
+            ShadowDisplayManager.removeDisplay(legacy)
+        }
+    }
+
 }
