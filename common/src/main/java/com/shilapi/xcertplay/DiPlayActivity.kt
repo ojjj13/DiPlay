@@ -316,11 +316,12 @@ class DiPlayActivity : ComponentActivity() {
                 }
             }
         }
-        if (com.shilapi.xcertplay.hud.BydOutputSettings.available(this)) section(content, getString(R.string.byd_navigation), R.drawable.ic_dp_navigation) { card ->
-            toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
-                getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
-                com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
+        // Android Presentation output does not require a BYD HUD/navigation receiver.
+        section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_navigation) { card ->
             val clusterDisplay = ClusterMapPresentation.findDisplay(this)
+            if (clusterDisplay == null) {
+                card.addView(label(getString(R.string.cluster_display_unavailable), 14, MUTED))
+            }
             if (clusterDisplay != null) {
                 val clusterSize = ClusterMapPresentation.sizeOf(clusterDisplay)
                 val diLink4 = DiLink4ClusterDisplay.matches(clusterDisplay.name, clusterSize.x, clusterSize.y)
@@ -423,6 +424,11 @@ class DiPlayActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+        if (com.shilapi.xcertplay.hud.BydOutputSettings.available(this)) section(content, getString(R.string.byd_navigation), R.drawable.ic_dp_navigation) { card ->
+            toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
+                getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
+                com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
             toggle(card, getString(R.string.car_battery_for_the_iphone),
                 getString(R.string.car_battery_for_the_iphone_description),
                 BydOutputSettings.batteryToIphone(this)) {
@@ -1047,6 +1053,9 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScaleTenths(appContext) * 10}%")
                     appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
                     appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
+                    appendLine()
+                    appendLine("--- Current cluster display diagnostics (even when disabled) ---")
+                    appendLine(ClusterMapPresentation.diagnosticReport(appContext))
                     appendLine()
                     appendLine("--- Last display negotiation (timestamps distinguish it from current settings) ---")
                     appendLine(DisplayDiagnosticSnapshot.report(appContext))

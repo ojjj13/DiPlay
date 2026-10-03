@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cluster_display_unavailable">当前未检测到兼容的仪表显示。请开启原车仪表地图后重新打开此设置；如仍未检测到，请保存诊断报告。</string>
+</resources>

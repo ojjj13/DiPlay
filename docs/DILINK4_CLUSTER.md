@@ -2,6 +2,13 @@
 
 Based on upstream v0.2.10 (`3e43e25`), with only the experimental DiLink 4 cluster changes. No picture/color filters or picture-adjustment controls are included.
 
+## Test 2: settings visibility and diagnostics
+
+- Cluster settings now have their own section, independent of the BYD HUD/navigation service check.
+- If no compatible display is visible, the section explains this instead of disappearing.
+- Exported reports always include the saved cluster toggle, receiver availability, all visible display names/geometry/flags, presentation display IDs and selected display, even without a CarPlay connection.
+- Open Settings → CarPlay map on instrument cluster (experimental). Enable the toggle if available, then reconnect the iPhone. If the section reports no compatible display, export a diagnostic report directly.
+
 ## Changes
 
 - Recognises the exact public presentation display `fission_bg_xdjaVirtualSurface` at 1920×720, observed on a 2022 BYD Seal / DiLink 4.0. No display ID is hard-coded.

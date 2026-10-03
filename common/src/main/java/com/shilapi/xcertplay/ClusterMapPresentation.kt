@@ -164,6 +164,17 @@ internal class ClusterMapPresentation(
                     "${it.displayId}:${it.name} ${size.x}x${size.y} flags=${it.flags} valid=${it.isValid}"
                 }.orEmpty()
 
+        fun diagnosticReport(context: Context): String = buildString {
+            appendLine("clusterEnabled=${AirPlayPersistence.loadClusterMapEnabled(context)}")
+            appendLine("navigationReceiverAvailable=${com.shilapi.xcertplay.hud.BydOutputSettings.available(context)}")
+            appendLine("allDisplays=${describeDisplays(context)}")
+            val presentations = context.getSystemService(DisplayManager::class.java)
+                ?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).orEmpty()
+            appendLine("presentationDisplayIds=${presentations.joinToString { it.displayId.toString() }}")
+            val selected = findDisplay(context)
+            append("selectedCluster=${selected?.let { "${it.displayId}:${it.name}" } ?: "none"}")
+        }
+
         fun sizeOf(display: Display): Point = Point().also {
             @Suppress("DEPRECATION")
             display.getRealSize(it)

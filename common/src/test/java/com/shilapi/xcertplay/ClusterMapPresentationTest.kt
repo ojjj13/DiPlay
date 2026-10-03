@@ -4,6 +4,8 @@ import android.hardware.display.DisplayManager
 import android.view.Display
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -92,6 +94,35 @@ class ClusterMapPresentationTest {
         } finally {
             ShadowDisplayManager.removeDisplay(current)
             ShadowDisplayManager.removeDisplay(legacy)
+        }
+    }
+
+    @Test fun disabledClusterStillReportsDisplayWithoutNavigationReceiver() {
+        val enabled = AirPlayPersistence.loadClusterMapEnabled(context)
+        AirPlayPersistence.saveClusterMapEnabled(context, false)
+        val id = display(DiLink4ClusterDisplay.NAME, "w1920dp-h720dp-mdpi")
+        try {
+            assertFalse(com.shilapi.xcertplay.hud.BydOutputSettings.available(context))
+            val report = ClusterMapPresentation.diagnosticReport(context)
+            assertTrue(report.contains("clusterEnabled=false"))
+            assertTrue(report.contains("navigationReceiverAvailable=false"))
+            assertTrue(report.contains("1920x720"))
+            assertTrue(report.contains("selectedCluster=$id:${DiLink4ClusterDisplay.NAME}"))
+        } finally {
+            ShadowDisplayManager.removeDisplay(id)
+            AirPlayPersistence.saveClusterMapEnabled(context, enabled)
+        }
+    }
+
+    @Test fun diagnosticsDistinguishVisibleDisplayFromEligiblePresentation() {
+        val id = display(DiLink4ClusterDisplay.NAME, "w1920dp-h720dp-mdpi")
+        shadowOf(manager.getDisplay(id)).setFlags(0)
+        try {
+            val report = ClusterMapPresentation.diagnosticReport(context)
+            assertTrue(report.contains("$id:${DiLink4ClusterDisplay.NAME}"))
+            assertTrue(report.contains("selectedCluster=none"))
+        } finally {
+            ShadowDisplayManager.removeDisplay(id)
         }
     }
 
