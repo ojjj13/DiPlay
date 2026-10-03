@@ -320,11 +320,23 @@ class DiPlayActivity : ComponentActivity() {
         section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_navigation) { card ->
             card.addView(label(getString(R.string.adb_cluster_probe_hint), 14, MUTED))
             card.addView(button(getString(R.string.adb_cluster_probe), false) { runAdbClusterProbe() }, matchButton(10, 56))
+            toggle(card, getString(R.string.adb_cluster_activity_mode),
+                getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
+                AirPlayPersistence.saveAdbClusterEnabled(this, it)
+                render()
+                reconnectForClusterMap()
+            }
+            if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
+                card.addView(button(getString(R.string.adb_cluster_authorize), false) { authorizeClusterRouting() }, matchButton(10, 56))
+                card.addView(button(getString(R.string.adb_cluster_open), false) {
+                    startActivity(Intent(this, AdbClusterActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }, matchButton(10, 56))
+            }
             val clusterDisplay = ClusterMapPresentation.findDisplay(this)
-            if (clusterDisplay == null) {
+            if (clusterDisplay == null && !AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 card.addView(label(getString(R.string.cluster_display_unavailable), 14, MUTED))
             }
-            if (clusterDisplay != null) {
+            if (clusterDisplay != null && !AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 val clusterSize = ClusterMapPresentation.sizeOf(clusterDisplay)
                 val diLink4 = DiLink4ClusterDisplay.matches(clusterDisplay.name, clusterSize.x, clusterSize.y)
                 toggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
@@ -1023,6 +1035,24 @@ class DiPlayActivity : ComponentActivity() {
         }
         connectButton?.isEnabled = setupError == null
     }
+    private fun authorizeClusterRouting() {
+        val app = applicationContext
+        Thread({
+            val result = runCatching {
+                com.shilapi.xcertplay.adb.LocalAdb(com.shilapi.xcertplay.adb.AdbKeys.load(app)).use {
+                    it.connect(mayAsk = true)
+                }
+            }.getOrNull()
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) {
+                    toast(if (result == com.shilapi.xcertplay.adb.LocalAdb.Access.READY)
+                        getString(R.string.adb_access_ready) else getString(R.string.adb_not_approved))
+                    if (result == com.shilapi.xcertplay.adb.LocalAdb.Access.READY) ClusterActivityOutput.activity.get()?.route()
+                }
+            }
+        }, "adb-cluster-authorize").start()
+    }
+
     private fun runAdbClusterProbe() {
         if (!AdbClusterProbe.running.compareAndSet(false, true)) return
         toast(getString(R.string.adb_cluster_probe_running))
@@ -1078,6 +1108,13 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine()
                     appendLine("--- Current cluster display diagnostics (even when disabled) ---")
                     appendLine(ClusterMapPresentation.diagnosticReport(appContext))
+                    appendLine()
+                    appendLine("--- ADB cluster activity routing ---")
+                    appendLine("adbClusterActivityEnabled=${AirPlayPersistence.loadAdbClusterEnabled(appContext)}")
+                    appendLine("clusterActivityMainTask=${ClusterActivityOutput.mainTaskId} surfaceValid=${ClusterActivityOutput.surface?.isValid}")
+                    AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
+                        DiagnosticRedactor.redact(line)?.let { appendLine(it) }
+                    }
                     appendLine()
                     appendLine("--- Last explicit ADB cluster probe ---")
                     AdbClusterProbe.report(appContext).lineSequence().forEach { line ->

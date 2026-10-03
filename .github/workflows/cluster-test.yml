@@ -1,7 +1,7 @@
-name: DiLink 4 cluster test APK
+name: DiLink 4 cluster activity test APK
 on:
   push:
-    branches: [feature/dilink4-cluster-0.2.10]
+    branches: [feature/dilink4-cluster-activity-0.2.10]
   workflow_dispatch:
 permissions:
   contents: write
@@ -65,5 +65,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="dilink4-cluster-0.2.10-test-${GITHUB_SHA::7}"
-          gh release create "$tag" delivery/* --target "$GITHUB_SHA" --prerelease --title "DiPlay 0.2.10 — DiLink 4 cluster test" --notes-file docs/DILINK4_CLUSTER.md
+          tag="dilink4-cluster-activity-0.2.10-test-${GITHUB_SHA::7}"
+          gh release create "$tag" delivery/* --target "$GITHUB_SHA" --prerelease --title "DiPlay 0.2.10 — DiLink 4 cluster activity test" --notes-file docs/DILINK4_CLUSTER.md
