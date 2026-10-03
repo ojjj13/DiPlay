@@ -2,6 +2,14 @@
 
 Based on upstream v0.2.10 (`3e43e25`), with only the experimental DiLink 4 cluster changes. No picture/color filters or picture-adjustment controls are included.
 
+## Test 3: ADB-assisted access probe
+
+In the cluster settings section, tap **Test cluster access via ADB** while parked. Approve DiPlay's own debugging key if prompted. After the finished message, save the diagnostic report and share it.
+
+The helper lists displays under the ADB shell identity and attempts an invisible, short-lived Presentation surface on the exact measured DiLink 4 display only. It exits automatically and records any access error. It also collects the display-service dump and display-related service names. No root, permission modifications, guessed Binder transactions or projection-mode changes are used.
+
+This build tests ADB rendering access; it does not yet transport the CarPlay video stream through ADB. A valid surface is not proof of physical cluster routing. The normal app-level cluster path remains available.
+
 ## Test 2: settings visibility and diagnostics
 
 - Cluster settings now have their own section, independent of the BYD HUD/navigation service check.

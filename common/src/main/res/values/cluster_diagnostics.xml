@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="cluster_display_unavailable">No compatible cluster display is currently available. Enable the car’s native cluster map, then reopen these settings. If it is still missing, save a diagnostic report.</string>
+    <string name="adb_cluster_probe">Test cluster access via ADB</string>
+    <string name="adb_cluster_probe_hint">Run while parked. Allow DiPlay’s debugging request if prompted, then save a diagnostic report. This checks access only; it does not start CarPlay cluster video.</string>
+    <string name="adb_cluster_probe_running">Checking cluster access…</string>
+    <string name="adb_cluster_probe_done">Check finished. Save a diagnostic report to see the result.</string>
+    <string name="adb_cluster_probe_failed">Could not save the probe result. Please try again.</string>
 </resources>

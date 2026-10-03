@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="cluster_display_unavailable">当前未检测到兼容的仪表显示。请开启原车仪表地图后重新打开此设置；如仍未检测到，请保存诊断报告。</string>
+    <string name="adb_cluster_probe">通过 ADB 测试仪表访问</string>
+    <string name="adb_cluster_probe_hint">请停车后运行。如出现调试授权提示，请允许 DiPlay，然后保存诊断报告。此操作仅检测访问能力，不启动 CarPlay 仪表视频。</string>
+    <string name="adb_cluster_probe_running">正在检测仪表访问…</string>
+    <string name="adb_cluster_probe_done">检测已结束，请保存诊断报告查看结果。</string>
+    <string name="adb_cluster_probe_failed">无法保存检测结果，请重试。</string>
 </resources>

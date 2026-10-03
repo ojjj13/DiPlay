@@ -318,6 +318,8 @@ class DiPlayActivity : ComponentActivity() {
         }
         // Android Presentation output does not require a BYD HUD/navigation receiver.
         section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_navigation) { card ->
+            card.addView(label(getString(R.string.adb_cluster_probe_hint), 14, MUTED))
+            card.addView(button(getString(R.string.adb_cluster_probe), false) { runAdbClusterProbe() }, matchButton(10, 56))
             val clusterDisplay = ClusterMapPresentation.findDisplay(this)
             if (clusterDisplay == null) {
                 card.addView(label(getString(R.string.cluster_display_unavailable), 14, MUTED))
@@ -1021,6 +1023,26 @@ class DiPlayActivity : ComponentActivity() {
         }
         connectButton?.isEnabled = setupError == null
     }
+    private fun runAdbClusterProbe() {
+        if (!AdbClusterProbe.running.compareAndSet(false, true)) return
+        toast(getString(R.string.adb_cluster_probe_running))
+        val app = applicationContext
+        Thread({
+            try {
+                AdbClusterProbe.run(app)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast(getString(R.string.adb_cluster_probe_done))
+                }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast(getString(R.string.adb_cluster_probe_failed))
+                }
+            } finally {
+                AdbClusterProbe.running.set(false)
+            }
+        }, "adb-cluster-probe").start()
+    }
+
     private fun reportFileName() = "DiPlay-${SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.US).format(Date())}.txt"
 
     private fun chooseReportDestination() {
@@ -1056,6 +1078,11 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine()
                     appendLine("--- Current cluster display diagnostics (even when disabled) ---")
                     appendLine(ClusterMapPresentation.diagnosticReport(appContext))
+                    appendLine()
+                    appendLine("--- Last explicit ADB cluster probe ---")
+                    AdbClusterProbe.report(appContext).lineSequence().forEach { line ->
+                        DiagnosticRedactor.redact(line)?.let { appendLine(it) }
+                    }
                     appendLine()
                     appendLine("--- Last display negotiation (timestamps distinguish it from current settings) ---")
                     appendLine(DisplayDiagnosticSnapshot.report(appContext))
