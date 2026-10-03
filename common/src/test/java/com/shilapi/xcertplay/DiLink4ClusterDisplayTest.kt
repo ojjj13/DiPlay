@@ -13,7 +13,7 @@ class DiLink4ClusterDisplayTest {
             assertEquals(content.url, config.initialUrl)
             assertEquals(CarPlayClusterDisplay.config(1920, 624, scalePercent = 100, content = content).safeArea, config.safeArea)
             assertNotNull(config.safeArea)
-            assertTrue(config.safeAreaDrawOutside)
+            assertEquals(true, config.safeAreaDrawOutside)
         }
     }
 
