@@ -21,31 +21,51 @@ internal object AdbClusterRouter {
         return candidates.singleOrNull()
     }
 
-    internal fun command(apk: String, pkg: String, clusterTask: Int, hostTask: Int, display: Int): String =
-        "CLASSPATH=${AdbClusterProbe.quote(apk)} app_process /system/bin ${AdbClusterRouteTool::class.java.name} " +
-            "${AdbClusterProbe.quote(pkg)} $clusterTask $hostTask $display"
+    // Direct shell launch, following Hanxu4131's legacy platform-21 adapter.
+    internal fun launchCommand(pkg: String, display: Int, token: String): String {
+        require(display > 0)
+        require(Regex("[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)+").matches(pkg))
+        require(runCatching { java.util.UUID.fromString(token).toString() == token }.getOrDefault(false))
+        return "am start-activity --display $display -f 0x18000000 " +
+            "-n $pkg/com.shilapi.xcertplay.AdbClusterActivity --es cluster_launch_token $token"
+    }
 
-    fun route(context: Context, clusterTask: Int, hostTask: Int): Result {
+    internal fun accepted(output: String): Boolean =
+        (output.contains("Starting: Intent {") || Regex("(?m)^Status: ok\\s*$").containsMatchIn(output)) &&
+        !Regex("(?i)error|exception|permission\\s*deni(?:al|ed)").containsMatchIn(output)
+
+    internal fun activityDisplay(dump: String, pkg: String, task: Int): Int? {
+        var display: Int? = null
+        val matches = mutableListOf<Int>()
+        val component = "$pkg/com.shilapi.xcertplay.AdbClusterActivity"
+        for (line in dump.lineSequence()) {
+            val header = Regex("^Display #(\\d+) \\(activities from top to bottom\\):\\s*$").matchEntire(line)
+            if (header != null) { display = header.groupValues[1].toInt(); continue }
+            if (line.isNotEmpty() && !line.first().isWhitespace()) display = null
+            val current = display ?: continue
+            if (Regex("^\\s{4,}\\* Hist #\\d+: ActivityRecord\\{").containsMatchIn(line) &&
+                Regex("\\bu\\d+\\s+" + Regex.escape(component) + "(?=\\s|,)").containsMatchIn(line) &&
+                Regex("\\bt$task(?=\\s|\\})").containsMatchIn(line)) matches.add(current)
+        }
+        return matches.singleOrNull()?.takeIf { it > 0 }
+    }
+
+    fun launch(context: Context, token: String, prepare: (Int) -> Boolean): Result {
         var success = false
         val text = buildString {
-            appendLine("ADB cluster routing capturedAt=${java.util.Date()}")
-            appendLine("clusterTask=$clusterTask mainTask=$hostTask")
+            appendLine("ADB direct cluster launch capturedAt=${java.util.Date()}")
             try {
-                require(clusterTask >= 0 && hostTask >= 0 && clusterTask != hostTask) { "Separate live tasks required" }
                 LocalAdb(AdbKeys.load(context)).use { adb ->
-                    // Approval is offered only by an explicit settings action, never on connection.
                     val access = adb.connect(mayAsk = false)
                     appendLine("adbAccess=$access")
                     if (access != LocalAdb.Access.READY) return@use
-                    val dump = adb.shell("dumpsys display") ?: error("Display dump unavailable")
-                    val display = displayId(dump)
+                    val display = displayId(adb.shell("dumpsys display").orEmpty())
                     appendLine("routeTarget=${display ?: "none"}")
-                    if (display == null) return@use
-                    check(AirPlayPersistence.loadAdbClusterEnabled(context)) { "ADB cluster mode was disabled" }
-                    val output = adb.shell(command(context.applicationInfo.sourceDir, context.packageName,
-                        clusterTask, hostTask, display)) ?: error("Routing helper transport failed")
-                    appendLine(output)
-                    success = output.lineSequence().any { it == "routeSuccess=true" }
+                    if (display == null || !AirPlayPersistence.loadAdbClusterEnabled(context) || !prepare(display)) return@use
+                    val output = adb.shell(launchCommand(context.packageName, display, token)).orEmpty()
+                    success = accepted(output)
+                    appendLine(output.take(1500))
+                    appendLine("launchAccepted=$success; awaiting actual display confirmation")
                 }
             } catch (error: Exception) {
                 appendLine("routeError=${error.javaClass.simpleName}: ${error.message}")
@@ -54,6 +74,13 @@ internal object AdbClusterRouter {
         File(context.filesDir, REPORT).writeText(text)
         return Result(success, text)
     }
+
+    fun verify(context: Context, task: Int): Int? = runCatching {
+        LocalAdb(AdbKeys.load(context)).use { adb ->
+            if (adb.connect(mayAsk = false) != LocalAdb.Access.READY) null
+            else activityDisplay(adb.shell("dumpsys activity activities").orEmpty(), context.packageName, task)
+        }
+    }.getOrNull()
 
     fun report(context: Context): String = File(context.filesDir, REPORT).let {
         if (it.isFile) it.readText() else "ADB cluster routing has not been run."

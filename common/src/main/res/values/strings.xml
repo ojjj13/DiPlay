@@ -478,12 +478,12 @@
     <string name="center_map_no_permission_screen">This head unit has no settings screen for this permission. Allow it over ADB.</string>
     <string name="launcher_map_sharing">Share the live map with other launchers</string>
     <string name="launcher_map_sharing_description">Launchers that support DiPlay can show the live dashboard map inside their own home screen. Off by default, because any app on the head unit could then ask for the map. See docs/LAUNCHER_INTEGRATION.md.</string>
-    <string name="adb_cluster_activity_label">DiPlay Cluster</string>
+    <string name="adb_cluster_activity_label">Cluster Map</string>
     <string name="adb_cluster_activity_mode">DiLink 4 cluster video via ADB (experimental)</string>
-    <string name="adb_cluster_activity_description">Use a separate activity for the CarPlay cluster stream. Authorize ADB before connecting, then reconnect the iPhone. If automatic routing fails, move DiPlay Cluster using your window manager.</string>
+    <string name="adb_cluster_activity_description">Launch the map directly on the verified cluster display through internal ADB. Authorize ADB, then reconnect the iPhone.</string>
     <string name="adb_cluster_authorize">Authorize ADB / retry cluster routing</string>
-    <string name="adb_cluster_open">Open cluster video activity</string>
-    <string name="adb_cluster_routing">Moving cluster video through ADB…</string>
+    <string name="adb_cluster_open">Retry cluster map</string>
+    <string name="adb_cluster_routing">Launching cluster map through ADB…</string>
     <string name="adb_cluster_routed">Cluster task routed; waiting for iPhone map</string>
-    <string name="adb_cluster_route_failed">Automatic routing failed. Export diagnostics or move DiPlay Cluster with the window manager.</string>
+    <string name="adb_cluster_route_failed">Cluster launch failed; export diagnostics.</string>
 </resources>

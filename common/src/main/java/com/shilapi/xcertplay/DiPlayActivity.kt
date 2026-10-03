@@ -329,7 +329,7 @@ class DiPlayActivity : ComponentActivity() {
             if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 card.addView(button(getString(R.string.adb_cluster_authorize), false) { authorizeClusterRouting() }, matchButton(10, 56))
                 card.addView(button(getString(R.string.adb_cluster_open), false) {
-                    startActivity(Intent(this, AdbClusterActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    ClusterActivityOutput.retry()
                 }, matchButton(10, 56))
             }
             val clusterDisplay = ClusterMapPresentation.findDisplay(this)
@@ -1047,7 +1047,7 @@ class DiPlayActivity : ComponentActivity() {
                 if (!isFinishing && !isDestroyed) {
                     toast(if (result == com.shilapi.xcertplay.adb.LocalAdb.Access.READY)
                         getString(R.string.adb_access_ready) else getString(R.string.adb_not_approved))
-                    if (result == com.shilapi.xcertplay.adb.LocalAdb.Access.READY) ClusterActivityOutput.activity.get()?.route()
+                    if (result == com.shilapi.xcertplay.adb.LocalAdb.Access.READY) ClusterActivityOutput.retry()
                 }
             }
         }, "adb-cluster-authorize").start()

@@ -478,12 +478,12 @@
     <string name="center_map_no_permission_screen">此车机没有该权限的设置界面，请通过 ADB 允许。</string>
     <string name="launcher_map_sharing">与其他启动器共享实时地图</string>
     <string name="launcher_map_sharing_description">支持 DiPlay 的启动器可以在自己的主屏幕中显示实时仪表盘地图。默认关闭，因为开启后车机上的任何应用都可以请求该地图。详见 docs/LAUNCHER_INTEGRATION.md。</string>
-    <string name="adb_cluster_activity_label">DiPlay 仪表</string>
+    <string name="adb_cluster_activity_label">仪表地图</string>
     <string name="adb_cluster_activity_mode">DiLink 4 仪表视频（ADB，实验性）</string>
-    <string name="adb_cluster_activity_description">使用独立窗口显示 CarPlay 仪表视频。连接前授权 ADB，然后重新连接 iPhone。自动移动失败时，可用仪表窗口管理移动“DiPlay 仪表”。</string>
+    <string name="adb_cluster_activity_description">通过内置ADB直接在已验证仪表副屏启动地图。请先授权ADB，再重新连接iPhone。</string>
     <string name="adb_cluster_authorize">授权 ADB / 重试仪表移动</string>
-    <string name="adb_cluster_open">打开仪表视频窗口</string>
-    <string name="adb_cluster_routing">正在通过 ADB 移动仪表视频…</string>
+    <string name="adb_cluster_open">重试仪表地图</string>
+    <string name="adb_cluster_routing">正在通过ADB启动仪表地图…</string>
     <string name="adb_cluster_routed">仪表窗口已移动，等待 iPhone 地图</string>
-    <string name="adb_cluster_route_failed">自动移动失败。请导出诊断，或用仪表窗口管理移动“DiPlay 仪表”。</string>
+    <string name="adb_cluster_route_failed">仪表启动失败，请导出诊断。</string>
 </resources>

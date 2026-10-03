@@ -1,7 +1,10 @@
 package com.shilapi.xcertplay
 
 import android.app.Activity
-import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.graphics.drawable.ColorDrawable
+import java.util.UUID
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
@@ -19,27 +22,29 @@ import java.lang.ref.WeakReference
 class AdbClusterActivity : Activity() {
     private var waiting: TextView? = null
     private var surface: Surface? = null
-    private var routing = false
-    private var attemptedRoute = false
     internal var routeStatus = ""
         private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!AirPlayPersistence.loadAdbClusterEnabled(this)) { finish(); return }
-        ClusterActivityOutput.activity = WeakReference(this)
-        ClusterActivityOutput.launchPending = false
+        val token = intent.getStringExtra("cluster_launch_token")
+        if (!ClusterActivityOutput.acceptsToken(token)) { ClusterActivityOutput.retry(); finish(); return }
+        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
         val video = SurfaceView(this)
         video.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 surface = holder.surface
-                ClusterActivityOutput.attach(this@AdbClusterActivity, holder.surface)
-                ensureRoute()
+                if (ClusterActivityOutput.activity.get() === this@AdbClusterActivity)
+                    ClusterActivityOutput.attach(this@AdbClusterActivity, holder.surface)
+
             }
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Unit
             override fun surfaceDestroyed(holder: SurfaceHolder) {
@@ -56,6 +61,14 @@ class AdbClusterActivity : Activity() {
         }
         root.addView(waiting, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
+        root.post {
+            val attached = root.display?.displayId ?: -1
+            if (attached > 0) confirmDisplay(token, attached)
+            else Thread({
+                val verified = AdbClusterRouter.verify(applicationContext, taskId)
+                runOnUiThread { confirmDisplay(token, verified ?: -1) }
+            }, "cluster-display-check").start()
+        }
         updateStream()
     }
 
@@ -64,32 +77,16 @@ class AdbClusterActivity : Activity() {
         waiting?.text = getString(R.string.cluster_waiting_for_map) + "\n" + routeStatus
     }
 
-    internal fun ensureRoute() {
-        if (!attemptedRoute && surface != null && ClusterActivityOutput.mainTaskId >= 0) {
-            attemptedRoute = true
-            route()
+    private fun confirmDisplay(token: String?, display: Int) {
+        if (isFinishing || isDestroyed || !ClusterActivityOutput.confirm(this, token, display)) {
+            finish(); return
         }
+        routeStatus = getString(R.string.adb_cluster_routed)
+        surface?.let { ClusterActivityOutput.attach(this, it) }
+        updateStream()
     }
 
-    internal fun route() {
-        if (routing || isFinishing || isDestroyed) return
-        routing = true
-        routeStatus = getString(R.string.adb_cluster_routing)
-        updateStream()
-        val clusterTask = taskId
-        val hostTask = ClusterActivityOutput.mainTaskId
-        val app = applicationContext
-        Thread({
-            val result = AdbClusterRouter.route(app, clusterTask, hostTask)
-            runOnUiThread {
-                routing = false
-                if (isFinishing || isDestroyed) return@runOnUiThread
-                routeStatus = if (result.success) getString(R.string.adb_cluster_routed)
-                    else getString(R.string.adb_cluster_route_failed)
-                updateStream()
-            }
-        }, "adb-cluster-route").start()
-    }
+    internal fun route() { ClusterActivityOutput.retry() }
 
     // Losing focus must not detach stream 111. SurfaceHolder owns the rendering lifetime.
     override fun onDestroy() {
@@ -97,6 +94,7 @@ class AdbClusterActivity : Activity() {
         if (ClusterActivityOutput.activity.get() === this) {
             ClusterActivityOutput.activity.clear()
             ClusterActivityOutput.launchPending = false
+            ClusterActivityOutput.retry()
         }
         super.onDestroy()
     }
@@ -106,6 +104,27 @@ class AdbClusterActivity : Activity() {
 internal object ClusterActivityOutput {
     var activity = WeakReference<AdbClusterActivity>(null)
     var launchPending = false
+    private val main = Handler(Looper.getMainLooper())
+    @Volatile private var generation = 0
+    @Volatile private var launchToken: String? = null
+    @Volatile private var expectedDisplay = -1
+    private var launchHost = WeakReference<Activity>(null)
+    private val retryTick = Runnable { launchHost.get()?.let(::ensure) }
+
+    fun acceptsToken(token: String?): Boolean = token != null && token == launchToken && hostOwner != null
+    fun confirm(window: AdbClusterActivity, token: String?, display: Int): Boolean {
+        if (!acceptsToken(token) || display <= 0 || display != expectedDisplay ||
+            !AirPlayPersistence.loadAdbClusterEnabled(window)) return false
+        activity.get()?.takeIf { it !== window }?.finish()
+        activity = WeakReference(window)
+        launchPending = false
+        main.removeCallbacks(retryTick)
+        return true
+    }
+    fun retry() {
+        main.removeCallbacks(retryTick)
+        if (hostOwner != null && launchHost.get() != null) main.postDelayed(retryTick, 5_000L)
+    }
     var mainTaskId = -1
         private set
     var surface: Surface? = null
@@ -124,15 +143,29 @@ internal object ClusterActivityOutput {
     }
 
     fun ensure(host: Activity) {
-        activity.get()?.let { it.ensureRoute(); return }
-        if (launchPending) return
+        launchHost = WeakReference(host)
+        if (!AirPlayPersistence.loadAdbClusterEnabled(host) || hostOwner == null) return
+        if (activity.get()?.let { !it.isFinishing && !it.isDestroyed } == true || launchPending) return
         launchPending = true
-        try {
-            host.startActivity(Intent(host, AdbClusterActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (error: RuntimeException) {
-            launchPending = false
-            throw error
-        }
+        val epoch = ++generation
+        val token = UUID.randomUUID().toString()
+        launchToken = token
+        expectedDisplay = -1
+        val app = host.applicationContext
+        Thread({
+            val result = AdbClusterRouter.launch(app, token) { display ->
+                if (generation != epoch || launchToken != token) false
+                else { expectedDisplay = display; true }
+            }
+            main.post {
+                if (generation != epoch) return@post
+                launchPending = false
+                if (activity.get() == null) {
+                    if (!result.success) { launchToken = null; expectedDisplay = -1 }
+                    retry()
+                }
+            }
+        }, "adb-cluster-launch").start()
     }
 
     fun attach(owner: Any, next: Surface) {
@@ -155,6 +188,11 @@ internal object ClusterActivityOutput {
 
     fun stop(owner: Any) {
         if (hostOwner !== owner) return
+        ++generation
+        launchToken = null
+        expectedDisplay = -1
+        launchHost.clear()
+        main.removeCallbacks(retryTick)
         onSurface?.invoke(null)
         onSurface = null
         hostOwner = null
