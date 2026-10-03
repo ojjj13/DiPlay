@@ -758,7 +758,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
         if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
             return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this)).also {
-                appendLog("Cluster activity: requesting stream 111 at ${it.widthPixels}x${it.heightPixels}; ADB task routing")
+                appendLog("Cluster activity: requesting stream 111 at ${it.widthPixels}x${it.heightPixels}; safeArea=${it.safeArea} drawOutside=${it.safeAreaDrawOutside}; ADB task routing")
             }
         }
         val theme = effectiveClusterTheme()
@@ -772,8 +772,7 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         if (DiLink4ClusterDisplay.matches(display.name, size.x, size.y)) {
-            // DiLink 5 safe-area coordinates have not been measured on this car. Start with
-            // a native-size, uncropped stream and let the stock projection layer place it.
+            // Use the observed DiLink 4 activity size and trial DiLink 5 marker-safe margins.
             return DiLink4ClusterDisplay.streamConfig(
                 AirPlayPersistence.loadClusterContent(this),
             ).also {

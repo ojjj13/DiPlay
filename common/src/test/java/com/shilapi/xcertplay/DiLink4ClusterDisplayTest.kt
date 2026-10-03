@@ -5,13 +5,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DiLink4ClusterDisplayTest {
-    @Test fun nativeStreamKeepsSelectedContentWithoutDilink5Crop() {
+    @Test fun activitySizedStreamKeepsContentAndReusesDilink5SafeArea() {
         for (content in CarPlayClusterDisplay.Content.entries) {
             val config = DiLink4ClusterDisplay.streamConfig(content)
             assertEquals(1920, config.widthPixels)
-            assertEquals(720, config.heightPixels)
+            assertEquals(624, config.heightPixels)
             assertEquals(content.url, config.initialUrl)
-            assertNull(config.safeArea)
+            assertEquals(CarPlayClusterDisplay.config(1920, 624, scalePercent = 100, content = content).safeArea, config.safeArea)
+            assertNotNull(config.safeArea)
+            assertTrue(config.safeAreaDrawOutside)
         }
     }
 

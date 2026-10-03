@@ -2,7 +2,7 @@ package com.shilapi.xcertplay
 
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 
-/** Candidate measured on the 2022 Seal / DiLink 4.0; physical routing still needs a car test. */
+/** 2022 Seal / DiLink 4.0: 1920x720 logical display, 1920x624 observed activity area. */
 internal object DiLink4ClusterDisplay {
     const val NAME = "fission_bg_xdjaVirtualSurface"
 
@@ -10,7 +10,11 @@ internal object DiLink4ClusterDisplay {
     fun matches(name: String, width: Int, height: Int): Boolean =
         name == NAME && width == 1920 && height == 720
 
+    const val STREAM_WIDTH = 1920
+    const val STREAM_HEIGHT = 624
+
+    // Reuse DiLink 5 marker-safe margins as a calibration starting point.
+    // Draw outside remains enabled so the map background still fills the activity.
     fun streamConfig(content: CarPlayClusterDisplay.Content) =
-        CarPlayClusterDisplay.config(1920, 720, scalePercent = 100, content = content)
-            .copy(safeArea = null)
+        CarPlayClusterDisplay.config(STREAM_WIDTH, STREAM_HEIGHT, scalePercent = 100, content = content)
 }
