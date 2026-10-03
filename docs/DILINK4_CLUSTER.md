@@ -2,6 +2,12 @@
 
 Based on upstream v0.2.10 (`3e43e25`), with only the experimental DiLink 4 cluster changes. No picture/color filters or picture-adjustment controls are included.
 
+## Test 4: exact native surface metadata query
+
+Tap **Test cluster access via ADB**, then export the diagnostic report. The helper now also queries `FissionHostSvc` transaction 101 using an empty request Parcel, matching `getQtProjectionDispInfoArrayNative` in the device-supplied `libxdjacontainerservice_jni.so`. Android's `service call` command adds an interface token and therefore does not reproduce that request exactly.
+
+The report records whether the transaction was handled, reply size, surface count, names, dimensions and whether a producer Binder was returned. It does not construct or connect to those surfaces, draw into them, or change projection modes. A positive result would identify a route for further investigation; it does not implement video transport. Zero, malformed replies and permission errors are recorded without claiming that the physical cluster is unavailable.
+
 ## Test 3: ADB-assisted access probe
 
 In the cluster settings section, tap **Test cluster access via ADB** while parked. Approve DiPlay's own debugging key if prompted. After the finished message, save the diagnostic report and share it.

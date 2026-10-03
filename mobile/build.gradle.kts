@@ -40,7 +40,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".hudtest"
-            versionNameSuffix = "-dilink4-cluster-test3"
+            versionNameSuffix = "-dilink4-cluster-test4"
         }
         release {
             optimization {

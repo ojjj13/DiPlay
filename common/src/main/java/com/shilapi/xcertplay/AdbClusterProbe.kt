@@ -7,6 +7,8 @@ import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
+import android.os.IBinder
+import android.os.Parcel
 import android.os.Process
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -58,6 +60,49 @@ internal object AdbClusterProbe {
 
 /** Runs as the already-authorized ADB shell user, with ordinary Android access checks intact. */
 object AdbClusterProbeTool {
+    /** Matches getQtProjectionDispInfoArrayNative in the device's supplied JNI library. */
+    @SuppressLint("PrivateApi")
+    private fun probeFissionSurfaces() {
+        val request = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            val service = Class.forName("android.os.ServiceManager")
+                .getMethod("checkService", String::class.java)
+                .invoke(null, "FissionHostSvc") as? IBinder
+            if (service == null) {
+                println("fissionServiceFound=false")
+                return
+            }
+            // BYD's JNI getter sends an empty Parcel: no interface token or arguments.
+            // This is a metadata getter, not a projection-mode or drawing transaction.
+            val handled = service.transact(101, request, reply, 0)
+            println("fissionGetterHandled=$handled replyBytes=${reply.dataSize()}")
+            if (!handled || reply.dataSize() < 4) return
+            reply.setDataPosition(0)
+            val count = reply.readInt()
+            println("fissionSurfaceCount=$count")
+            if (count !in 0..16) {
+                println("fissionReplyUnexpected=true")
+                return
+            }
+            repeat(count) { index ->
+                val name = reply.readString()
+                val width = reply.readInt()
+                val height = reply.readInt()
+                val producer = reply.readStrongBinder()
+                println("fissionSurface[$index]=$name ${width}x${height} producerPresent=${producer != null}")
+                // Do not construct a Surface, attach a decoder or take over the producer.
+            }
+            println("fissionReplyRemainingBytes=${reply.dataAvail()}")
+        } catch (error: Throwable) {
+            println("fissionGetterError=${error.javaClass.simpleName}: ${error.message}")
+            error.cause?.let { println("fissionGetterCause=${it.javaClass.simpleName}: ${it.message}") }
+        } finally {
+            reply.recycle()
+            request.recycle()
+        }
+    }
+
     @JvmStatic
     @SuppressLint("PrivateApi")
     fun main(args: Array<String>) {
@@ -72,6 +117,7 @@ object AdbClusterProbeTool {
             val system = thread.getMethod("getSystemContext").invoke(main) as Context
             val context = system.createPackageContext("com.android.shell", 0)
             println("helperUid=${Process.myUid()} package=${context.packageName}")
+            probeFissionSurfaces()
             val manager = context.getSystemService(DisplayManager::class.java)
             val displays = manager.displays
             for (display in displays) {
