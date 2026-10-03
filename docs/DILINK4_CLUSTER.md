@@ -2,6 +2,12 @@
 
 Based on upstream v0.2.10 (`3e43e25`), with only the experimental DiLink 4 cluster changes. No picture/color filters or picture-adjustment controls are included.
 
+## Test 5: stock container projection getter
+
+Tap **Test cluster access via ADB**, then export the report. This build also queries `AutoContainerNative` using transaction 5 and the `android.os.IAutoContainer` interface token. Both are verified from `BpAutoContainer::getProjectionDisplayInfo` in the device-supplied JNI library. This is the getter used by the stock container's active virtual-display path.
+
+The helper decodes the Binder status, return code and size-prefixed projection-info parcelable, reporting the name, dimensions and producer presence. It records permission and format errors. Returned producers are not connected to or used for rendering. No system installation or projection-mode changes are performed.
+
 ## Test 4: exact native surface metadata query
 
 Tap **Test cluster access via ADB**, then export the diagnostic report. The helper now also queries `FissionHostSvc` transaction 101 using an empty request Parcel, matching `getQtProjectionDispInfoArrayNative` in the device-supplied `libxdjacontainerservice_jni.so`. Android's `service call` command adds an interface token and therefore does not reproduce that request exactly.

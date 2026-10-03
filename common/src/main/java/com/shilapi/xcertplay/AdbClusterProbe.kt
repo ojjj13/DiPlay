@@ -60,6 +60,70 @@ internal object AdbClusterProbe {
 
 /** Runs as the already-authorized ADB shell user, with ordinary Android access checks intact. */
 object AdbClusterProbeTool {
+    /** Matches BpAutoContainer::getProjectionDisplayInfo in the supplied JNI library. */
+    @SuppressLint("PrivateApi")
+    private fun probeAutoContainerSurface() {
+        val request = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            val service = Class.forName("android.os.ServiceManager")
+                .getMethod("checkService", String::class.java)
+                .invoke(null, "AutoContainerNative") as? IBinder
+            if (service == null) {
+                println("autoContainerServiceFound=false")
+                return
+            }
+            // The native proxy uses this constant, even when service list reports no descriptor.
+            request.writeInterfaceToken("android.os.IAutoContainer")
+            val handled = service.transact(5, request, reply, 0)
+            println("autoContainerGetterHandled=$handled replyBytes=${reply.dataSize()}")
+            if (!handled || reply.dataSize() < 4) return
+            reply.setDataPosition(0)
+            reply.readException()
+            if (reply.dataAvail() < 8) {
+                println("autoContainerReplyUnexpected=true")
+                return
+            }
+            val result = reply.readInt()
+            val present = reply.readInt()
+            println("autoContainerResult=$result parcelablePresent=$present")
+            if (present != 1) {
+                println("autoContainerReplyRemainingBytes=${reply.dataAvail()}")
+                return
+            }
+            // ProjectionDisplayInfoParcel is a size-prefixed AIDL parcelable.
+            val start = reply.dataPosition()
+            val size = reply.readInt()
+            if (size < 4 || size > reply.dataSize() - start) {
+                println("autoContainerParcelableSizeInvalid=$size")
+                return
+            }
+            val end = start + size
+            if (reply.dataPosition() >= end) return
+            val name = reply.readString()
+            if (reply.dataPosition() + 4 > end) return
+            val width = reply.readInt()
+            if (reply.dataPosition() + 4 > end) return
+            val height = reply.readInt()
+            if (reply.dataPosition() >= end) return
+            val producer = reply.readStrongBinder()
+            if (reply.dataPosition() > end) {
+                println("autoContainerReplyUnexpected=true")
+                return
+            }
+            println("autoContainerSurface=$name ${width}x${height} producerPresent=${producer != null}")
+            // Observe metadata only: no Surface construction or connection to the producer.
+            reply.setDataPosition(end)
+            println("autoContainerReplyRemainingBytes=${reply.dataAvail()}")
+        } catch (error: Throwable) {
+            println("autoContainerGetterError=${error.javaClass.simpleName}: ${error.message}")
+            error.cause?.let { println("autoContainerGetterCause=${it.javaClass.simpleName}: ${it.message}") }
+        } finally {
+            reply.recycle()
+            request.recycle()
+        }
+    }
+
     /** Matches getQtProjectionDispInfoArrayNative in the device's supplied JNI library. */
     @SuppressLint("PrivateApi")
     private fun probeFissionSurfaces() {
@@ -117,6 +181,7 @@ object AdbClusterProbeTool {
             val system = thread.getMethod("getSystemContext").invoke(main) as Context
             val context = system.createPackageContext("com.android.shell", 0)
             println("helperUid=${Process.myUid()} package=${context.packageName}")
+            probeAutoContainerSurface()
             probeFissionSurfaces()
             val manager = context.getSystemService(DisplayManager::class.java)
             val displays = manager.displays
