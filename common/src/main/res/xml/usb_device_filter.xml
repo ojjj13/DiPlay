@@ -2,4 +2,7 @@
 <resources>
     <!-- CH341 USB\VID_1A86&PID_5512&REV_0304 -->
     <usb-device vendor-id="6790" product-id="21778" />
+    <!-- Apple discovery before and after the iPhone changes USB product/configuration.
+         Matches IphoneUsbMatcher.appleVendor(); Android owns the remembered default. -->
+    <usb-device vendor-id="1452" />
 </resources>

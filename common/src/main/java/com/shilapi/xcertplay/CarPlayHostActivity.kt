@@ -680,6 +680,14 @@ class CarPlayHostActivity : ComponentActivity() {
             dismissClusterPresentation()
             return
         }
+        if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
+            ClusterActivityOutput.bind(this, taskId) { onClusterSurface(it) }
+            ClusterActivityOutput.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+            runCatching { ClusterActivityOutput.ensure(this) }.onFailure {
+                appendLog("Cluster activity: launch failed ${it.javaClass.simpleName}: ${it.message}")
+            }
+            return
+        }
         val theme = effectiveClusterTheme()
         if (DiLink51ClusterLayout.supported()) {
             ensureDiLink51ClusterPresentation(theme)
@@ -705,10 +713,10 @@ class CarPlayHostActivity : ComponentActivity() {
             presentation.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
             applyClusterTurnOverlay()
             Log.i(ClusterMapPresentation.TAG, "cluster presentation shown display=${display.displayId} name=${display.name}")
-            appendLog("Cluster map: presentation shown display=${display.displayId}")
+            appendLog("Cluster map: presentation shown display=${display.displayId} name=${display.name}")
         } catch (error: RuntimeException) {
             Log.w(ClusterMapPresentation.TAG, "cluster presentation failed", error)
-            appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+            appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}: ${error.message}")
         }
     }
 
@@ -739,7 +747,7 @@ class CarPlayHostActivity : ComponentActivity() {
             } catch (error: RuntimeException) {
                 clusterLayers.remove(fullMap)
                 clusterPresentation = null
-                appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+                appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}: ${error.message}")
                 return
             }
         }
@@ -764,6 +772,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun dismissClusterPresentation() {
+        ClusterActivityOutput.stop(this)
         val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
         clusterLayers.clear()
         clusterPresentation = null
@@ -777,16 +786,22 @@ class CarPlayHostActivity : ComponentActivity() {
         if (clusterSurface === surface) return
         // A direct handoff lets MediaCodec.setOutputSurface preserve its reference frames.
         // Clearing first would destroy the decoder and can leave stream 111 waiting for an IDR.
-        if (!DiLink51ClusterLayout.supported() || surface == null) {
+        if ((!DiLink51ClusterLayout.supported() && !AirPlayPersistence.loadAdbClusterEnabled(this)) || surface == null) {
             clusterSurface?.let { old -> sink?.clearSurface(SCREEN_TYPE_ALT, old) }
         }
         clusterSurface = surface
         // Never fall back to the main surface: two decoders must not draw into one Surface.
         if (surface != null) sink?.setSurface(SCREEN_TYPE_ALT, surface)
+        updateClusterMapShown()
     }
 
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
+        if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
+            return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this)).also {
+                appendLog("Cluster activity: requesting stream 111 at ${it.widthPixels}x${it.heightPixels}; safeArea=${it.safeArea} drawOutside=${it.safeAreaDrawOutside}; ADB task routing")
+            }
+        }
         val theme = effectiveClusterTheme()
         val display = ClusterMapPresentation.findDisplay(this, theme) ?: return null
         val size = ClusterMapPresentation.sizeOf(display)
@@ -795,6 +810,14 @@ class CarPlayHostActivity : ComponentActivity() {
             val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
             return DiLink51ClusterLayout.streamConfig().also {
                 appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+            }
+        }
+        if (DiLink4ClusterDisplay.matches(display.name, size.x, size.y)) {
+            // Use the observed DiLink 4 activity size and trial DiLink 5 marker-safe margins.
+            return DiLink4ClusterDisplay.streamConfig(
+                AirPlayPersistence.loadClusterContent(this),
+            ).also {
+                appendLog("Cluster map: DiLink 4 candidate display=${display.displayId}; requesting ${it.widthPixels}x${it.heightPixels} url=${it.initialUrl}")
             }
         }
         return CarPlayClusterDisplay.config(
@@ -891,7 +914,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(clusterPresentation != null && !MapMirrors.any)
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown((clusterPresentation != null ||
+            (AirPlayPersistence.loadAdbClusterEnabled(this) && clusterSurface != null)) && !MapMirrors.any)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -3192,6 +3216,7 @@ class CarPlayHostActivity : ComponentActivity() {
                         return@runOnUiThread
                     }
                     activeScreenStreamTypes.clear()
+                    ClusterActivityOutput.setStreamActive(false)
                     setConnectionStage(getString(R.string.carplay_session_ended_reconnecting))
                     appendLog("AirPlay session ended; reconnecting from scratch")
                     reconnectAfterLoss("AirPlay session ended")
@@ -3204,6 +3229,7 @@ class CarPlayHostActivity : ComponentActivity() {
                         return@runOnUiThread
                     }
                     activeScreenStreamTypes.clear()
+                    ClusterActivityOutput.setStreamActive(false)
                     setConnectionStage(getString(R.string.transport_error_reconnecting))
                     appendLog("CarPlay transport error: $message; reconnecting from scratch")
                     reconnectAfterLoss("CarPlay transport error: $message")
@@ -3609,6 +3635,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val size = activeDisplaySize ?: return
         appendLog(reason)
         activeScreenStreamTypes.clear()
+        ClusterActivityOutput.setStreamActive(false)
         setConnectionStage(reason)
         Log.i(TAG, "$reason; rebuilding stack at ${size.width}x${size.height}")
         val generation = ++restartGeneration
@@ -3827,6 +3854,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 Log.i(ClusterMapPresentation.TAG, "cluster stream active=$active")
                 appendLog("Cluster map: stream active=$active")
                 clusterPresentation?.setStreamActive(active)
+                ClusterActivityOutput.setStreamActive(active)
                 MapMirrors.setStreamActive(active)
                 if (active) {
                     mainHandler.removeCallbacks(hideIdleCenterMap)

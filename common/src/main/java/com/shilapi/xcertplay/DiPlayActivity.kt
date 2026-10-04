@@ -460,11 +460,29 @@ class DiPlayActivity : ComponentActivity() {
                 if (!BydOutputSettings.navigationAvailable(this)) clusterSongSwitch(card)
             }
         }
-        if (BydOutputSettings.navigationAvailable(this)) section(content, getString(R.string.byd_navigation), R.drawable.ic_dp_navigation) { card ->
-            toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
-                getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
-                com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
-            if (ClusterMapPresentation.findDisplay(this) != null) {
+        // Android Presentation output does not require a BYD HUD/navigation receiver.
+        section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_navigation) { card ->
+            card.addView(label(getString(R.string.adb_cluster_probe_hint), 14, MUTED))
+            card.addView(button(getString(R.string.adb_cluster_probe), false) { runAdbClusterProbe() }, matchButton(10, 56))
+            toggle(card, getString(R.string.adb_cluster_activity_mode),
+                getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
+                AirPlayPersistence.saveAdbClusterEnabled(this, it)
+                render()
+                reconnectForClusterMap()
+            }
+            if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
+                card.addView(button(getString(R.string.adb_cluster_authorize), false) { authorizeClusterRouting() }, matchButton(10, 56))
+                card.addView(button(getString(R.string.adb_cluster_open), false) {
+                    ClusterActivityOutput.retry()
+                }, matchButton(10, 56))
+            }
+            val clusterDisplay = ClusterMapPresentation.findDisplay(this)
+            if (clusterDisplay == null && !AirPlayPersistence.loadAdbClusterEnabled(this)) {
+                card.addView(label(getString(R.string.cluster_display_unavailable), 14, MUTED))
+            }
+            if (clusterDisplay != null && !AirPlayPersistence.loadAdbClusterEnabled(this)) {
+                val clusterSize = ClusterMapPresentation.sizeOf(clusterDisplay)
+                val diLink4 = DiLink4ClusterDisplay.matches(clusterDisplay.name, clusterSize.x, clusterSize.y)
                 toggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
                     getString(R.string.shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c),
                     AirPlayPersistence.loadClusterMapEnabled(this)) {
@@ -565,36 +583,43 @@ class DiPlayActivity : ComponentActivity() {
                         }, matchButton(10, 56))
                         card.addView(label(getString(R.string.turn_card_overlay_note), 14, MUTED))
                     }
-                    val turnCard = officialCardOnly
-                    choice(card, getString(if (turnCard) R.string.turn_card_size else R.string.cluster_map_size),
-                        listOf(getString(R.string.cluster_size_standard), getString(R.string.cluster_size_larger), getString(R.string.cluster_size_largest)),
-                        sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
-                        AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
-                    }
-                    val across = CarPlayClusterDisplay.horizontalSteps.toList()
-                    choice(card, getString(if (turnCard) R.string.turn_card_horizontal else R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
-                        across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
-                        AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
-                    }
-                    val upDown = CarPlayClusterDisplay.verticalSteps.toList()
-                    choice(card, getString(if (turnCard) R.string.turn_card_vertical else R.string.car_marker_vertical), upDown.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
-                        upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
-                        AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
-                    }
-                    card.addView(button(getString(if (turnCard) R.string.reset_turn_card_to_centre else R.string.reset_car_marker_to_centre), false) {
-                        AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
-                        AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
-                        render()
-                        reconnectForClusterMap()
-                    }, matchButton(10, 56))
-                    toggle(card, getString(R.string.dashboard_map_only_in_small_and_full_navi),
-                        getString(R.string.dashboard_map_only_in_small_and_full_navi_description),
-                        BydOutputSettings.clusterStreamPause(this)) {
-                        BydOutputSettings.setClusterStreamPause(this, it)
-                        if (it) checkAdbState(mayAsk = true)
+                    if (!diLink4) {
+                        val turnCard = officialCardOnly
+                        choice(card, getString(if (turnCard) R.string.turn_card_size else R.string.cluster_map_size),
+                            listOf(getString(R.string.cluster_size_standard), getString(R.string.cluster_size_larger), getString(R.string.cluster_size_largest)),
+                            sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
+                            AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
+                        }
+                        val across = CarPlayClusterDisplay.horizontalSteps.toList()
+                        choice(card, getString(if (turnCard) R.string.turn_card_horizontal else R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
+                            across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
+                            AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
+                        }
+                        val upDown = CarPlayClusterDisplay.verticalSteps.toList()
+                        choice(card, getString(if (turnCard) R.string.turn_card_vertical else R.string.car_marker_vertical), upDown.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
+                            upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
+                            AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
+                        }
+                        card.addView(button(getString(if (turnCard) R.string.reset_turn_card_to_centre else R.string.reset_car_marker_to_centre), false) {
+                            AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
+                            AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
+                            render()
+                            reconnectForClusterMap()
+                        }, matchButton(10, 56))
+                        toggle(card, getString(R.string.dashboard_map_only_in_small_and_full_navi),
+                            getString(R.string.dashboard_map_only_in_small_and_full_navi_description),
+                            BydOutputSettings.clusterStreamPause(this)) {
+                            BydOutputSettings.setClusterStreamPause(this, it)
+                            if (it) checkAdbState(mayAsk = true)
+                        }
                     }
                 }
             }
+        }
+        if (BydOutputSettings.navigationAvailable(this)) section(content, getString(R.string.byd_navigation), R.drawable.ic_dp_navigation) { card ->
+            toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
+                getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
+                BydOutputSettings.enabled(this)) { BydOutputSettings.setEnabled(this, it) }
             clusterSongSwitch(card)
         }
         section(content, getString(R.string.permissions_and_connection_help), R.drawable.ic_dp_permissions) { card ->
@@ -2025,6 +2050,44 @@ class DiPlayActivity : ComponentActivity() {
         }
         connectButton?.isEnabled = setupError == null
     }
+    private fun authorizeClusterRouting() {
+        val app = applicationContext
+        Thread({
+            val result = runCatching {
+                com.shilapi.xcertplay.adb.LocalAdb(com.shilapi.xcertplay.adb.AdbKeys.load(app)).use {
+                    it.connect(mayAsk = true)
+                }
+            }.getOrNull()
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) {
+                    toast(if (result == com.shilapi.xcertplay.adb.LocalAdb.Access.READY)
+                        getString(R.string.adb_access_ready) else getString(R.string.adb_not_approved))
+                    if (result == com.shilapi.xcertplay.adb.LocalAdb.Access.READY) ClusterActivityOutput.retry()
+                }
+            }
+        }, "adb-cluster-authorize").start()
+    }
+
+    private fun runAdbClusterProbe() {
+        if (!AdbClusterProbe.running.compareAndSet(false, true)) return
+        toast(getString(R.string.adb_cluster_probe_running))
+        val app = applicationContext
+        Thread({
+            try {
+                AdbClusterProbe.run(app)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast(getString(R.string.adb_cluster_probe_done))
+                }
+            } catch (error: Exception) {
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) toast(getString(R.string.adb_cluster_probe_failed))
+                }
+            } finally {
+                AdbClusterProbe.running.set(false)
+            }
+        }, "adb-cluster-probe").start()
+    }
+
     private fun reportFileName() = "DiPlay-${SimpleDateFormat("yyyyMMdd-HHmmss-SSS", Locale.US).format(Date())}.txt"
 
     private fun chooseReportDestination() {
@@ -2057,6 +2120,21 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScaleTenths(appContext) * 10}%")
                     appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
                     appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
+                    appendLine()
+                    appendLine("--- Current cluster display diagnostics (even when disabled) ---")
+                    appendLine(ClusterMapPresentation.diagnosticReport(appContext))
+                    appendLine()
+                    appendLine("--- ADB cluster activity routing ---")
+                    appendLine("adbClusterActivityEnabled=${AirPlayPersistence.loadAdbClusterEnabled(appContext)}")
+                    appendLine("clusterActivityMainTask=${ClusterActivityOutput.mainTaskId} surfaceValid=${ClusterActivityOutput.surface?.isValid}")
+                    AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
+                        DiagnosticRedactor.redact(line)?.let { appendLine(it) }
+                    }
+                    appendLine()
+                    appendLine("--- Last explicit ADB cluster probe ---")
+                    AdbClusterProbe.report(appContext).lineSequence().forEach { line ->
+                        DiagnosticRedactor.redact(line)?.let { appendLine(it) }
+                    }
                     appendLine()
                     appendLine("--- BYD vehicle-data probe ---")
                     appendLine(
