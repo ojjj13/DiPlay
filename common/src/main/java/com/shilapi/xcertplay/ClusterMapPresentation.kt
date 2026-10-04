@@ -119,7 +119,9 @@ internal class ClusterMapPresentation(
             root.addView(surfaceView, videoParams)
         }
         waitingLabel = TextView(context).apply {
-            text = context.getString(R.string.cluster_waiting_for_map)
+            val diLink4 = DiLink4ClusterDisplay.matches(display.name, size.x, size.y)
+            text = if (diLink4) "" else context.getString(R.string.cluster_waiting_for_map)
+            if (diLink4) setBackgroundColor(Color.BLACK)
             setTextColor(if (plan != null && !dark) Color.DKGRAY else Color.WHITE)
             textSize = 26f
             gravity = Gravity.CENTER

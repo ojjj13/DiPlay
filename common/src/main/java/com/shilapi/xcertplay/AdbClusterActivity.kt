@@ -47,6 +47,7 @@ class AdbClusterActivity : Activity() {
         }.also { videoTexture = it }
         root.addView(video, FrameLayout.LayoutParams(-1, -1))
         waiting = TextView(this).apply {
+            setBackgroundColor(Color.BLACK)
             setTextColor(Color.WHITE)
             textSize = 22f
             gravity = Gravity.CENTER
@@ -75,7 +76,7 @@ class AdbClusterActivity : Activity() {
 
     internal fun updateStream() {
         waiting?.visibility = if (ClusterActivityOutput.streamActive) View.GONE else View.VISIBLE
-        waiting?.text = getString(R.string.cluster_waiting_for_map) + "\n" + routeStatus
+        waiting?.text = ""
         updateTurnCard()
     }
 
