@@ -9,8 +9,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -22,6 +20,7 @@ import java.lang.ref.WeakReference
 class AdbClusterActivity : Activity() {
     private var waiting: TextView? = null
     private var surface: Surface? = null
+    private var videoTexture: ClusterPictureTexture? = null
     private var turnCard: ClusterTurnCardView? = null
     private var safeAreaPreview: SafeAreaEditorView? = null
     internal var routeStatus = ""
@@ -40,20 +39,12 @@ class AdbClusterActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
-        val video = SurfaceView(this)
-        video.holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: SurfaceHolder) {
-                surface = holder.surface
-                if (ClusterActivityOutput.activity.get() === this@AdbClusterActivity)
-                    ClusterActivityOutput.attach(this@AdbClusterActivity, holder.surface)
-
-            }
-            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Unit
-            override fun surfaceDestroyed(holder: SurfaceHolder) {
-                surface?.let { ClusterActivityOutput.detach(this@AdbClusterActivity, it) }
-                surface = null
-            }
-        })
+        val video = ClusterPictureTexture(this) { next ->
+            surface?.let { ClusterActivityOutput.detach(this, it) }
+            surface = next
+            if (next != null && ClusterActivityOutput.activity.get() === this)
+                ClusterActivityOutput.attach(this, next)
+        }.also { videoTexture = it }
         root.addView(video, FrameLayout.LayoutParams(-1, -1))
         waiting = TextView(this).apply {
             setTextColor(Color.WHITE)
@@ -113,9 +104,10 @@ class AdbClusterActivity : Activity() {
 
     internal fun route() { ClusterActivityOutput.retry() }
 
-    // Losing focus must not detach stream 111. SurfaceHolder owns the rendering lifetime.
+    // Losing focus must not detach stream 111. The texture owns the rendering lifetime.
     override fun onDestroy() {
-        surface?.let { ClusterActivityOutput.detach(this, it) }
+        videoTexture?.close()
+        videoTexture = null
         if (ClusterActivityOutput.activity.get() === this) {
             ClusterActivityOutput.activity.clear()
             ClusterActivityOutput.launchPending = false

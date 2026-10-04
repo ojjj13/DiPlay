@@ -43,6 +43,7 @@ internal class ClusterMapPresentation(
 ) : Presentation(context, display) {
     private var waitingLabel: TextView? = null
     private var turnCardView: ClusterTurnCardView? = null
+    private var pictureTexture: ClusterPictureTexture? = null
     var outputSurface: Surface? = null
         private set
 
@@ -91,6 +92,12 @@ internal class ClusterMapPresentation(
             root.addView(textureView, videoParams)
             if (plan.fullMap) root.addView(InstrumentContrastView(context, plan, backdrop), FrameLayout.LayoutParams(-1, -1))
             Log.i(TAG, "layout=$theme viewport=$plan source=${plan.sourceLeft},${plan.sourceTop} dark=$dark")
+        } else if (DiLink4ClusterDisplay.matches(display.name, size.x, size.y)) {
+            val texture = ClusterPictureTexture(context) { surface ->
+                outputSurface = surface
+                onSurface(surface)
+            }.also { pictureTexture = it }
+            root.addView(texture, videoParams)
         } else {
             // Preserve the original PR renderer for DiLink 5 and unverified firmware.
             val surfaceView = SurfaceView(context)
@@ -124,6 +131,12 @@ internal class ClusterMapPresentation(
     }
 
     /** Hides the placeholder once the phone streams the cluster screen. */
+    override fun onStop() {
+        pictureTexture?.close()
+        pictureTexture = null
+        super.onStop()
+    }
+
     fun setStreamActive(active: Boolean) {
         waitingLabel?.visibility = if (active) View.GONE else View.VISIBLE
     }

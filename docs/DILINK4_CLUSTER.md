@@ -43,6 +43,20 @@ When Android offers DiPlay for the connected iPhone, select it and tick **Always
 
 The ordinary permission grant expires on disconnect. This change enables Android’s standard default-handler path; it is not a verified guarantee that DiLink’s custom USB dialog will retain the default. Test unplug/replug and a head-unit restart. If no default checkbox is offered or the firmware forgets the choice, further device investigation is needed.
 
+## Test 15 live picture controls
+
+Open Settings → Display and performance → Picture adjustments while CarPlay is connected.
+A compact panel overlays the live main stream; sliders immediately save brightness, contrast,
+saturation and warmth without negotiating or reconnecting the phone. Show original temporarily
+bypasses the filters on both streams; Done, Back or leaving the host restores the saved filter.
+Reset returns all sliders to neutral. Previous picture-control preferences are reused.
+
+The measured DiLink 4 cluster now renders stream 111 through a transparent TextureView with
+a fixed 1920×720 buffer so the same saved filter can apply live. Factory instruments, custom
+turn overlays and safe-area guides are not filtered. Other firmware's renderer is unchanged.
+This renderer change requires vehicle validation; test 14 remains the known-good layout build.
+Controls provide manual compensation, not a verified fix for intermittent colour-range faults.
+
 ## Validation status
 
 - Upstream baseline: `v0.2.11`, commit `6014025c653c4dae88d319ce446e0bf1ddb658ea`.
@@ -50,4 +64,4 @@ The ordinary permission grant expires on disconnect. This change enables Android
 - All changed Kotlin source/test files parse without errors. Changed resource XML parses and has unique resource names.
 - APK compilation, unit tests and lint have **not run for this build**. Local Gradle bootstrap failed to download through the execution environment’s network connection.
 - The fork workflow targets the new branch, runs unit tests/lint, verifies the signed test APK and runtime assets, and publishes only after these checks succeed. Its upstream input is the SHA-256-pinned official 0.2.11 APK.
-- Test 14 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.
+- Test 15 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.
