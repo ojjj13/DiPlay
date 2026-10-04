@@ -1,8 +1,7 @@
 name: Android checks
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: [validation/dilink4-cluster-upstream]
   workflow_dispatch:
 permissions:
   contents: read
