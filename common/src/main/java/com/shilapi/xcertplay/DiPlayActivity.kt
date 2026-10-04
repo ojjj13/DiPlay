@@ -60,6 +60,7 @@ import kotlin.math.roundToInt
 class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var page = "home"
+    private var clusterSafeAreaDialog: AlertDialog? = null
     private var pendingCarHotspotSetup = false
     private var setupError: String? = null
     private var status: TextView? = null
@@ -208,6 +209,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        clusterSafeAreaDialog?.dismiss()
         startupHotspotCancelled = true
         super.onStop()
         if (!isFinishing && !isChangingConfigurations) CenterMapOverlay.scheduleShow()
@@ -1880,6 +1882,8 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun openClusterSafeAreaEditor() {
+        clusterSafeAreaDialog?.dismiss()
+        val previewOwner = Any()
         val initial = AirPlayPersistence.loadClusterSafeAreaRect(this)
             ?: DiLink4ClusterDisplay.defaultSafeAreaRect(
                 AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
@@ -1889,11 +1893,20 @@ class DiPlayActivity : ComponentActivity() {
             setRect(initial, 1920, 720)
         }
         val panel = column().apply { setPadding(dp(16), dp(8), dp(16), dp(8)) }
-        panel.addView(label(getString(R.string.cluster_safe_area_hint), 14, MUTED))
-        panel.addView(editor, LinearLayout.LayoutParams(-1, dp(240)))
-        editor.doOnLayout { view ->
-            view.layoutParams = view.layoutParams.apply { height = (view.width * 720 / 1920).coerceAtLeast(1) }
+        panel.addView(label(getString(R.string.cluster_safe_area_live_hint), 14, MUTED))
+        val previewFrame = FrameLayout(this)
+        previewFrame.addView(editor, FrameLayout.LayoutParams(1, 1, Gravity.CENTER))
+        panel.addView(previewFrame, LinearLayout.LayoutParams(-1, 0, 1f))
+        previewFrame.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
+            val fit = minOf((view.width - dp(16)).coerceAtLeast(1) / 1920f,
+                (view.height - dp(16)).coerceAtLeast(1) / 720f)
+            val w = (1920 * fit).toInt().coerceAtLeast(1)
+            val h = (720 * fit).toInt().coerceAtLeast(1)
+            if (editor.layoutParams.width != w || editor.layoutParams.height != h) {
+                editor.layoutParams = FrameLayout.LayoutParams(w, h, Gravity.CENTER)
+            }
         }
+        editor.onRectChanged = { ClusterActivityOutput.updateSafeAreaPreview(previewOwner, it) }
         val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.cluster_safe_area_edit))
             .setView(panel)
             .setPositiveButton(getString(if (CarPlayBackgroundSession.hasSession())
@@ -1902,8 +1915,16 @@ class DiPlayActivity : ComponentActivity() {
                 render()
                 reconnectForClusterMap()
             }.setNegativeButton(getString(R.string.cancel), null).create()
+        clusterSafeAreaDialog = dialog
+        dialog.setOnDismissListener {
+            editor.onRectChanged = null
+            ClusterActivityOutput.endSafeAreaPreview(previewOwner)
+            if (clusterSafeAreaDialog === dialog) clusterSafeAreaDialog = null
+        }
         dialog.show()
-        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.9f).toInt(), -2)
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.9f).toInt(),
+            (resources.displayMetrics.heightPixels * 0.85f).toInt())
+        ClusterActivityOutput.beginSafeAreaPreview(previewOwner, initial)
     }
 
     private fun reconnectForClusterMap() {

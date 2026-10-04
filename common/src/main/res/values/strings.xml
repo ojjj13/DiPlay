@@ -558,4 +558,5 @@
     <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
     <string name="cluster_safe_area_reset">Reset cluster safe area</string>
     <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>
+    <string name="cluster_safe_area_live_hint">Drag the green edges here and watch the outline on the cluster. Save applies the layout after reconnecting; Cancel keeps your current box.</string>
 </resources>

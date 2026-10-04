@@ -11,6 +11,22 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE)
 class ClusterActivityOutputTest {
+    @Test fun staleEditorsCannotChangeOrClearANewerCalibrationPreview() {
+        val first = Any()
+        val second = Any()
+        val a = com.shilapi.xcertplay.airplay.SafeAreaRect(300, 100, 1500, 620)
+        val b = com.shilapi.xcertplay.airplay.SafeAreaRect(200, 80, 1600, 640)
+        ClusterActivityOutput.beginSafeAreaPreview(first, a)
+        ClusterActivityOutput.updateSafeAreaPreview(first, b)
+        assertEquals(b, ClusterActivityOutput.previewRect)
+        ClusterActivityOutput.beginSafeAreaPreview(second, a)
+        ClusterActivityOutput.updateSafeAreaPreview(first, b)
+        ClusterActivityOutput.endSafeAreaPreview(first)
+        assertEquals(a, ClusterActivityOutput.previewRect)
+        ClusterActivityOutput.endSafeAreaPreview(second)
+        assertNull(ClusterActivityOutput.previewRect)
+    }
+
     @Test fun overlayStateSurvivesHandoffAndOnlyItsOwnerCanClearIt() {
         val host = Any()
         val newerHost = Any()

@@ -43,6 +43,8 @@ jobs:
           mkdir -p delivery
           cp mobile/build/outputs/apk/debug/mobile-debug.apk delivery/DiPlay-0.2.11-dilink4-cluster-test.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose delivery/DiPlay-0.2.11-dilink4-cluster-test.apk
+          test_version="$(sed -n 's/^clusterTestVersion=//p' gradle.properties)"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging delivery/DiPlay-0.2.11-dilink4-cluster-test.apk | grep -F "versionName='0.2.11-dilink4-cluster-test$test_version'"
           for name in identity.pk8 certificate.p7b; do
             unzip -p delivery/DiPlay-0.2.11-dilink4-cluster-test.apk "assets/offline-mfi/$name" | cmp - "$DIPLAY_AUTH_ASSETS_DIR/offline-mfi/$name"
           done
@@ -66,4 +68,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="dilink4-cluster-0.2.11-test-${GITHUB_SHA::7}"
-          gh release create "$tag" delivery/* --target "$GITHUB_SHA" --prerelease --title "DiPlay 0.2.11 — DiLink 4 cluster activity test" --notes-file docs/DILINK4_CLUSTER.md
+          test_version="$(sed -n 's/^clusterTestVersion=//p' gradle.properties)"
+          gh release create "$tag" delivery/* --target "$GITHUB_SHA" --prerelease --title "DiPlay 0.2.11 — DiLink 4 cluster test $test_version" --notes-file docs/DILINK4_CLUSTER.md

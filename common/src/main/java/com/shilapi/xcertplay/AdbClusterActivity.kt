@@ -23,6 +23,7 @@ class AdbClusterActivity : Activity() {
     private var waiting: TextView? = null
     private var surface: Surface? = null
     private var turnCard: ClusterTurnCardView? = null
+    private var safeAreaPreview: SafeAreaEditorView? = null
     internal var routeStatus = ""
         private set
 
@@ -63,6 +64,12 @@ class AdbClusterActivity : Activity() {
         root.addView(waiting, FrameLayout.LayoutParams(-1, -1))
         turnCard = ClusterTurnCardView(this).apply { visibility = View.GONE }
         root.addView(turnCard, FrameLayout.LayoutParams(-1, -1))
+        safeAreaPreview = SafeAreaEditorView(this).apply {
+            visibility = View.GONE
+            interactive = false
+            dimOutside = false
+        }
+        root.addView(safeAreaPreview, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         root.post {
             val attached = root.display?.displayId ?: -1
@@ -84,6 +91,15 @@ class AdbClusterActivity : Activity() {
     internal fun updateTurnCard() {
         turnCard?.setLayout(ClusterActivityOutput.cardX, ClusterActivityOutput.cardY, ClusterActivityOutput.cardSize)
         turnCard?.setGuidance(if (ClusterActivityOutput.streamActive) ClusterActivityOutput.guidance else null)
+        updateSafeAreaPreview()
+    }
+
+    internal fun updateSafeAreaPreview() {
+        val rect = ClusterActivityOutput.previewRect
+        safeAreaPreview?.apply {
+            visibility = if (rect == null) View.GONE else View.VISIBLE
+            if (rect != null) { setRect(rect, 1920, 720); bringToFront() }
+        }
     }
 
     private fun confirmDisplay(token: String?, display: Int) {
@@ -162,6 +178,28 @@ internal object ClusterActivityOutput {
         activity.get()?.updateTurnCard()
     }
 
+    private var previewOwner: Any? = null
+    var previewRect: com.shilapi.xcertplay.airplay.SafeAreaRect? = null
+        private set
+
+    fun beginSafeAreaPreview(owner: Any, rect: com.shilapi.xcertplay.airplay.SafeAreaRect) {
+        previewOwner = owner
+        updateSafeAreaPreview(owner, rect)
+    }
+
+    fun updateSafeAreaPreview(owner: Any, rect: com.shilapi.xcertplay.airplay.SafeAreaRect) {
+        if (previewOwner !== owner) return
+        previewRect = rect.clampTo(1920, 720)
+        activity.get()?.updateSafeAreaPreview()
+    }
+
+    fun endSafeAreaPreview(owner: Any) {
+        if (previewOwner !== owner) return
+        previewOwner = null
+        previewRect = null
+        activity.get()?.updateSafeAreaPreview()
+    }
+
     fun bind(owner: Any, taskId: Int, callback: (Surface?) -> Unit) {
         hostOwner = owner
         mainTaskId = taskId
@@ -228,6 +266,8 @@ internal object ClusterActivityOutput {
         surfaceOwner = null
         launchPending = false
         guidance = null
+        previewOwner = null
+        previewRect = null
         setStreamActive(false)
         activity.get()?.finish()
     }

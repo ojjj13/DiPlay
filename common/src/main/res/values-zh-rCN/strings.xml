@@ -558,4 +558,5 @@
     <string name="cluster_safe_area_edit">仪表安全区域 · 编辑框</string>
     <string name="cluster_safe_area_reset">重置仪表安全区域</string>
     <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>
+    <string name="cluster_safe_area_live_hint">在此拖动绿色边界，仪表会同步显示区域框。保存后重新连接生效；取消保留当前区域。</string>
 </resources>
