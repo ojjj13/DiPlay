@@ -22,6 +22,7 @@ import java.lang.ref.WeakReference
 class AdbClusterActivity : Activity() {
     private var waiting: TextView? = null
     private var surface: Surface? = null
+    private var turnCard: ClusterTurnCardView? = null
     internal var routeStatus = ""
         private set
 
@@ -60,6 +61,8 @@ class AdbClusterActivity : Activity() {
             setPadding(24, 24, 24, 24)
         }
         root.addView(waiting, FrameLayout.LayoutParams(-1, -1))
+        turnCard = ClusterTurnCardView(this).apply { visibility = View.GONE }
+        root.addView(turnCard, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         root.post {
             val attached = root.display?.displayId ?: -1
@@ -75,6 +78,12 @@ class AdbClusterActivity : Activity() {
     internal fun updateStream() {
         waiting?.visibility = if (ClusterActivityOutput.streamActive) View.GONE else View.VISIBLE
         waiting?.text = getString(R.string.cluster_waiting_for_map) + "\n" + routeStatus
+        updateTurnCard()
+    }
+
+    internal fun updateTurnCard() {
+        turnCard?.setLayout(ClusterActivityOutput.cardX, ClusterActivityOutput.cardY, ClusterActivityOutput.cardSize)
+        turnCard?.setGuidance(if (ClusterActivityOutput.streamActive) ClusterActivityOutput.guidance else null)
     }
 
     private fun confirmDisplay(token: String?, display: Int) {
@@ -134,6 +143,24 @@ internal object ClusterActivityOutput {
     private var onSurface: ((Surface?) -> Unit)? = null
     var streamActive = false
         private set
+
+    var guidance: com.shilapi.xcertplay.hud.ClusterTurnGuidance? = null
+        private set
+    var cardX = com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay.DEFAULT_X_PERCENT
+        private set
+    var cardY = com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay.DEFAULT_Y_PERCENT
+        private set
+    var cardSize = com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.OverlaySize.MEDIUM
+        private set
+
+    fun setTurnCard(next: com.shilapi.xcertplay.hud.ClusterTurnGuidance?, x: Int, y: Int,
+        size: com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.OverlaySize) {
+        guidance = next
+        cardX = x
+        cardY = y
+        cardSize = size
+        activity.get()?.updateTurnCard()
+    }
 
     fun bind(owner: Any, taskId: Int, callback: (Surface?) -> Unit) {
         hostOwner = owner
@@ -200,6 +227,7 @@ internal object ClusterActivityOutput {
         surface = null
         surfaceOwner = null
         launchPending = false
+        guidance = null
         setStreamActive(false)
         activity.get()?.finish()
     }

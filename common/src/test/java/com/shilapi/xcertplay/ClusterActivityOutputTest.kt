@@ -11,6 +11,23 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE)
 class ClusterActivityOutputTest {
+    @Test fun overlayStateSurvivesHandoffAndOnlyItsOwnerCanClearIt() {
+        val host = Any()
+        val newerHost = Any()
+        val guidance = com.shilapi.xcertplay.hud.ClusterTurnGuidance(2, 0, 80, "Road", 4200, 630)
+        ClusterActivityOutput.bind(host, 4) { }
+        ClusterActivityOutput.setTurnCard(guidance, 20, 50,
+            com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.OverlaySize.LARGE)
+        ClusterActivityOutput.bind(newerHost, 5) { }
+        ClusterActivityOutput.stop(host)
+        assertEquals(guidance, ClusterActivityOutput.guidance)
+        assertEquals(20, ClusterActivityOutput.cardX)
+        assertEquals(50, ClusterActivityOutput.cardY)
+        ClusterActivityOutput.stop(newerHost)
+        assertNull(ClusterActivityOutput.guidance)
+        assertFalse(ClusterActivityOutput.streamActive)
+    }
+
     @Test fun surfaceRecreationRejectsStaleDetachAndRebindsNewHost() {
         val host = Any()
         val oldActivity = Any()

@@ -553,4 +553,6 @@
     <string name="hotspot_control_failed">The car could not start its hotspot. Open the hotspot in car settings.</string>
     <string name="byd_adb_features">BYD features · needs ADB</string>
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
+    <string name="turn_card_arrival">Arrival %1$s</string>
+    <string name="turn_card_minutes_left">%1$d min left</string>
 </resources>

@@ -683,6 +683,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
             ClusterActivityOutput.bind(this, taskId) { onClusterSurface(it) }
             ClusterActivityOutput.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+            applyClusterTurnOverlay()
             runCatching { ClusterActivityOutput.ensure(this) }.onFailure {
                 appendLog("Cluster activity: launch failed ${it.javaClass.simpleName}: ${it.message}")
             }
@@ -760,6 +761,10 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun applyClusterTurnOverlay() {
         val overlay = CarPlayClusterDisplay.usesCustomTurnCard(AirPlayPersistence.loadClusterContent(this))
+        ClusterActivityOutput.setTurnCard(if (overlay) clusterTurnGuidance else null,
+            AirPlayPersistence.loadClusterTurnCardOverlayXPercent(this),
+            AirPlayPersistence.loadClusterTurnCardOverlayYPercent(this),
+            AirPlayPersistence.loadClusterTurnCardOverlaySize(this))
         val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
         for (presentation in presentations) {
             presentation.setTurnCardOverlay(
@@ -798,7 +803,9 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
         if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
-            return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this)).also {
+            return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this),
+                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                AirPlayPersistence.loadClusterMarkerVerticalStep(this)).also {
                 appendLog("Cluster activity: requesting stream 111 at ${it.widthPixels}x${it.heightPixels}; safeArea=${it.safeArea} drawOutside=${it.safeAreaDrawOutside}; ADB task routing")
             }
         }
@@ -813,9 +820,11 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         if (DiLink4ClusterDisplay.matches(display.name, size.x, size.y)) {
-            // Use the observed DiLink 4 activity size and trial DiLink 5 marker-safe margins.
+            // Keep the 1920x720 stream and reuse the saved marker-safe-area controls.
             return DiLink4ClusterDisplay.streamConfig(
                 AirPlayPersistence.loadClusterContent(this),
+                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                AirPlayPersistence.loadClusterMarkerVerticalStep(this),
             ).also {
                 appendLog("Cluster map: DiLink 4 candidate display=${display.displayId}; requesting ${it.widthPixels}x${it.heightPixels} url=${it.initialUrl}")
             }

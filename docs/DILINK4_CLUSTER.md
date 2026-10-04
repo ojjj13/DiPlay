@@ -1,6 +1,6 @@
-# DiPlay 0.2.11 — DiLink 4 direct cluster launch (test 9)
+# DiPlay 0.2.11 — DiLink 4 direct cluster launch (test 10)
 
-Test 9 ports test 8’s direct local-ADB Activity launch onto the exact upstream v0.2.11 tag,
+Test 10 extends the navigation overlay and safe-area controls. The branch ports test 8’s direct local-ADB Activity launch onto the exact upstream v0.2.11 tag,
 following the legacy platform-21 approach published by 寒叙 (@Hanxu4131):
 https://github.com/Hanxu4131/BYD-CarPlay
 Reference files: LegacyClusterTarget.kt, LegacyClusterMap.kt, ClusterMapActivity.kt.
@@ -19,10 +19,14 @@ Original project authors and license notices remain in place.
 - Transparent, non-focusable cluster window. Stream 110 remains on the head unit; the existing stream-111 decoder attaches to the verified cluster SurfaceView.
 - Failed/unconfirmed launches retry after five seconds. Confirmed Activity placement stops launch retries; this is not a first-video-frame recovery policy.
 - Disable/host destruction invalidates launch tokens and cancels queued retries. Background retries never offer ADB authorization.
-- Keeps test 7's 1920×624 stream geometry and provisional safe-area margins. Tang-specific map editors, OEM song display, L1 coordination and full decoder-mirroring changes are not included.
+- Restores the stream to 1920×720 at 100% scale. Existing car-marker horizontal/vertical controls now adjust its safe area.
+- Select **Dashboard shows → Map with custom turn card** to show the upstream maneuver card in the ADB-launched cluster Activity. Existing card size and horizontal/vertical controls apply live.
+- The card shows arrival time (in the head unit's time zone/time format) and remaining route distance when the phone supplies them. If arrival time is absent, remaining minutes are shown when available. Missing totals stay blank.
+- Guidance clears on route expiry/end/disconnect, hides when the stream stops, and survives cluster Activity recreation through the host-owned state.
+- OEM song display, L1 coordination and full decoder-mirroring changes are not included.
 - No picture-filter changes.
 
-Vehicle acceptance is pending. Automated checks cannot establish visible placement or firmware compatibility.
+Test 9 direct cluster placement and remembered USB permissions were confirmed by the user. Test 10 overlay placement and 1920×720 geometry still require vehicle testing. Automated checks cannot establish visible placement or firmware compatibility.
 
 ## USB reconnect
 
@@ -36,7 +40,7 @@ The ordinary permission grant expires on disconnect. This change enables Android
 
 - Upstream baseline: `v0.2.11`, commit `6014025c653c4dae88d319ce446e0bf1ddb658ea`.
 - Local public-tree scan and whitespace checks pass. Changed resource/manifest XML parses; one launcher remains and the cluster Activity keeps its exported, independent task configuration.
-- Changed Kotlin syntax was compared against the upstream baseline: no new parser errors (the parser’s four existing errors in upstream `DiPlayActivity` are unchanged).
+- All changed Kotlin source/test files parse without errors. Changed resource XML parses and has unique resource names.
 - APK compilation, unit tests and lint have **not run for this build**. Local Gradle bootstrap failed to download through the execution environment’s network connection.
 - The fork workflow targets the new branch, runs unit tests/lint, verifies the signed test APK and runtime assets, and publishes only after these checks succeed. Its upstream input is the SHA-256-pinned official 0.2.11 APK.
-- APK validation remains pending until the branch workflow completes. Vehicle acceptance remains separate from automated checks.
+- Test 10 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.

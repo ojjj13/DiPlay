@@ -11,10 +11,11 @@ internal object DiLink4ClusterDisplay {
         name == NAME && width == 1920 && height == 720
 
     const val STREAM_WIDTH = 1920
-    const val STREAM_HEIGHT = 624
+    const val STREAM_HEIGHT = 720
 
     // Reuse DiLink 5 marker-safe margins as a calibration starting point.
     // Draw outside remains enabled so the map background still fills the activity.
-    fun streamConfig(content: CarPlayClusterDisplay.Content) =
-        CarPlayClusterDisplay.config(STREAM_WIDTH, STREAM_HEIGHT, scalePercent = 100, content = content)
+    fun streamConfig(content: CarPlayClusterDisplay.Content, horizontalStep: Int = 0, verticalStep: Int = 0) =
+        CarPlayClusterDisplay.config(STREAM_WIDTH, STREAM_HEIGHT, scalePercent = 100,
+            horizontalStep = horizontalStep, verticalStep = verticalStep, content = content)
 }

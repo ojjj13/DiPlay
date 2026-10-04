@@ -553,4 +553,6 @@
     <string name="hotspot_control_failed">车机热点开启失败，请在车机设置中开启。</string>
     <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
     <string name="location_reporting_reconnects">更改此设置会重新连接当前 CarPlay 会话。</string>
+    <string name="turn_card_arrival">%1$s 到达</string>
+    <string name="turn_card_minutes_left">剩余 %1$d 分钟</string>
 </resources>
