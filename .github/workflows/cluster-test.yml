@@ -14,10 +14,10 @@ jobs:
       - name: Check public source
         run: |
           python3 scripts/check_public_tree.py
-          if git grep -n -E 'CarPlayPicture|picture_adjustments|carplay_picture' -- common/src; then
-            echo 'Unexpected picture-filter changes in cluster-only branch' >&2
-            exit 1
-          fi
+          # Test 15 explicitly includes live main-screen and DiLink 4 cluster picture controls.
+          test -f common/src/main/java/com/shilapi/xcertplay/CarPlayPicture.kt
+          test -f common/src/main/java/com/shilapi/xcertplay/ClusterPictureTexture.kt
+          test -f common/src/test/java/com/shilapi/xcertplay/LivePictureTest.kt
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
