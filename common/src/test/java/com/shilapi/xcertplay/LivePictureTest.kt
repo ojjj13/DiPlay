@@ -55,7 +55,7 @@ class LivePictureTest {
             assertNotNull(cluster.applied)
             mainBinding.close()
             val old = main.applied
-            CarPlayPicture.preferences(context).edit().clear().apply()
+            CarPlayPicture.reset(CarPlayPicture.preferences(context))
             shadowOf(Looper.getMainLooper()).idle()
             assertSame(old, main.applied)
             assertNull(cluster.applied)

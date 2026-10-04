@@ -44,6 +44,13 @@ internal object CarPlayPicture {
     fun preferences(context: Context): SharedPreferences =
         context.getSharedPreferences("carplay_picture", Context.MODE_PRIVATE)
 
+    fun reset(prefs: SharedPreferences) {
+        // clear() does not notify listeners on Android 10. Explicit values update live views.
+        val editor = prefs.edit()
+        keys.forEach { editor.putInt(it, defaultValue(it)) }
+        editor.apply()
+    }
+
     fun defaultValue(key: String): Int = if (key == CONTRAST || key == SATURATION) 100 else 0
     fun range(key: String): IntRange = when (key) {
         BRIGHTNESS -> -50..50

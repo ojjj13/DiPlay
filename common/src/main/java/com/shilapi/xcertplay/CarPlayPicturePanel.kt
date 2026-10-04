@@ -63,7 +63,7 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
             text = context.getString(R.string.picture_reset); isAllCaps = false
             setOnClickListener {
                 original.isChecked = false
-                prefs.edit().clear().apply()
+                CarPlayPicture.reset(prefs)
                 controls.forEach { (key, pair) ->
                     pair.second.progress = CarPlayPicture.defaultValue(key) - CarPlayPicture.range(key).first
                 }
