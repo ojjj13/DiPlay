@@ -632,6 +632,21 @@ object AirPlayPersistence {
             .putInt(KEY_CLUSTER_MARKER_Y, step.coerceIn(CarPlayClusterDisplay.verticalSteps)).apply()
     }
 
+    // Cluster mapping has its own key; never reuse the main display mapping at the same resolution.
+    fun loadClusterSafeAreaRect(context: Context): SafeAreaRect? =
+        SafeAreaCodec.decode(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString("cluster_safe_area_1920x720", null))?.clampTo(1920, 720)
+
+    fun saveClusterSafeAreaRect(context: Context, rect: SafeAreaRect) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("cluster_safe_area_1920x720", SafeAreaCodec.encode(rect.clampTo(1920, 720))).apply()
+    }
+
+    fun clearClusterSafeAreaRect(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove("cluster_safe_area_1920x720").apply()
+    }
+
     fun loadRightHandDrive(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean(KEY_RIGHT_HAND_DRIVE, false)
@@ -644,7 +659,7 @@ object AirPlayPersistence {
 
     fun loadHideTopBar(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_HIDE_TOP_BAR, true)
+            .getBoolean(KEY_HIDE_TOP_BAR, false)
 
     fun saveHideTopBar(context: Context, hide: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -654,7 +669,7 @@ object AirPlayPersistence {
 
     fun loadHideBottomBar(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_HIDE_BOTTOM_BAR, true)
+            .getBoolean(KEY_HIDE_BOTTOM_BAR, false)
 
     fun saveHideBottomBar(context: Context, hide: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

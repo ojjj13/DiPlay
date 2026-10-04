@@ -555,4 +555,7 @@
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
     <string name="turn_card_arrival">Arrival %1$s</string>
     <string name="turn_card_minutes_left">%1$d min left</string>
+    <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
+    <string name="cluster_safe_area_reset">Reset cluster safe area</string>
+    <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>
 </resources>

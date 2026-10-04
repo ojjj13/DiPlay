@@ -106,10 +106,11 @@ class SafeAreaEditorView(context: Context) : View(context) {
         canvas.drawLine(0f, top, width, top, linePaint)
         canvas.drawLine(0f, bottom, width, bottom, linePaint)
 
-        drawLabel(canvas, "x=${safe.left}", left + 8f * density, top + 20f * density)
-        drawLabel(canvas, "x=${safe.right}", right + 8f * density, bottom - 8f * density)
-        drawLabel(canvas, "y=${safe.top}", left + 8f * density, top - 8f * density)
-        drawLabel(canvas, "y=${safe.bottom}", right - 88f * density, bottom + 20f * density)
+        val source = currentRectForSource() ?: safe
+        drawLabel(canvas, "x=${source.left}", left + 8f * density, top + 20f * density)
+        drawLabel(canvas, "x=${source.right}", right + 8f * density, bottom - 8f * density)
+        drawLabel(canvas, "y=${source.top}", left + 8f * density, top - 8f * density)
+        drawLabel(canvas, "y=${source.bottom}", right - 88f * density, bottom + 20f * density)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

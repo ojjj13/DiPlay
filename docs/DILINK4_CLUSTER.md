@@ -1,10 +1,15 @@
-# DiPlay 0.2.11 — DiLink 4 direct cluster launch (test 11)
+# DiPlay 0.2.11 — DiLink 4 direct cluster launch (test 12)
 
-Test 11 exposes the dashboard content and placement controls in ADB mode. Test 10 extends the navigation overlay and safe-area controls. The branch ports test 8’s direct local-ADB Activity launch onto the exact upstream v0.2.11 tag,
+Test 12 adds a draggable cluster safe-area box editor and defaults main-screen fullscreen off. Test 11 exposes the dashboard content and placement controls in ADB mode. Test 10 extends the navigation overlay and safe-area controls. The branch ports test 8’s direct local-ADB Activity launch onto the exact upstream v0.2.11 tag,
 following the legacy platform-21 approach published by 寒叙 (@Hanxu4131):
 https://github.com/Hanxu4131/BYD-CarPlay
 Reference files: LegacyClusterTarget.kt, LegacyClusterMap.kt, ClusterMapActivity.kt.
 Original project authors and license notices remain in place.
+
+## Safe-area editor
+Under **CarPlay map on instrument cluster**, tap **Cluster safe area · edit box**. Drag the four green boundaries in the 1920×720 preview, then save/apply. It takes effect on the next CarPlay connection; a manual replug may still be necessary because the settings-reconnect issue is unresolved. Cancel keeps the existing mapping. **Reset cluster safe area** restores marker-offset-based placement. The main-screen safe-area mapping is independent.
+
+Fullscreen now defaults off for unset preferences. Existing saved top/bottom bar choices are preserved; disable those switches once if they were already saved on.
 
 ## Test
 1. Update the existing test APK (same `com.shihab.diplay.hudtest` package). There is now one launcher: **DiPlay Test**. The cluster Activity remains available to the app’s direct ADB launch.
@@ -26,7 +31,7 @@ Original project authors and license notices remain in place.
 - OEM song display, L1 coordination and full decoder-mirroring changes are not included.
 - No picture-filter changes.
 
-Test 9 direct cluster placement and remembered USB permissions were confirmed by the user. Test 11 overlay placement and 1920×720 geometry still require vehicle testing. Automated checks cannot establish visible placement or firmware compatibility.
+Test 9 direct cluster placement and remembered USB permissions were confirmed by the user. Test 12 editor placement and 1920×720 geometry still require vehicle testing. Automated checks cannot establish visible placement or firmware compatibility.
 
 ## USB reconnect
 
@@ -43,4 +48,4 @@ The ordinary permission grant expires on disconnect. This change enables Android
 - All changed Kotlin source/test files parse without errors. Changed resource XML parses and has unique resource names.
 - APK compilation, unit tests and lint have **not run for this build**. Local Gradle bootstrap failed to download through the execution environment’s network connection.
 - The fork workflow targets the new branch, runs unit tests/lint, verifies the signed test APK and runtime assets, and publishes only after these checks succeed. Its upstream input is the SHA-256-pinned official 0.2.11 APK.
-- Test 11 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.
+- Test 12 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.

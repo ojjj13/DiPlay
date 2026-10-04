@@ -805,7 +805,8 @@ class CarPlayHostActivity : ComponentActivity() {
         if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
             return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this),
                 AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
-                AirPlayPersistence.loadClusterMarkerVerticalStep(this)).also {
+                AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+                AirPlayPersistence.loadClusterSafeAreaRect(this)).also {
                 appendLog("Cluster activity: requesting stream 111 at ${it.widthPixels}x${it.heightPixels}; safeArea=${it.safeArea} drawOutside=${it.safeAreaDrawOutside}; ADB task routing")
             }
         }
@@ -825,6 +826,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 AirPlayPersistence.loadClusterContent(this),
                 AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
                 AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+                AirPlayPersistence.loadClusterSafeAreaRect(this),
             ).also {
                 appendLog("Cluster map: DiLink 4 candidate display=${display.displayId}; requesting ${it.widthPixels}x${it.heightPixels} url=${it.initialUrl}")
             }

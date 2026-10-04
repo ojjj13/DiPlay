@@ -541,6 +541,7 @@ class DiPlayActivity : ComponentActivity() {
                         reconnectForClusterMap()
                     }
                 } else {
+                    if (diLink4) clusterSafeAreaControls(card)
                     val sizes = CarPlayClusterDisplay.scalePresets
                     val contents = CarPlayClusterDisplay.Content.entries
                     val content = AirPlayPersistence.loadClusterContent(this)
@@ -593,7 +594,7 @@ class DiPlayActivity : ComponentActivity() {
                             AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                         }
                     }
-                    run {
+                    if (!diLink4 || AirPlayPersistence.loadClusterSafeAreaRect(this) == null) {
                         val across = CarPlayClusterDisplay.horizontalSteps.toList()
                         choice(card, getString(if (turnCard) R.string.turn_card_horizontal else R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
                             across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
@@ -1860,6 +1861,51 @@ class DiPlayActivity : ComponentActivity() {
 
     // The cluster screen is described at connection time, so a running session reconnects over
     // its current link. The position choices need no call: getString(R.string.apply_and_reconnect) already does it.
+    private fun clusterSafeAreaControls(card: LinearLayout) {
+        val rect = AirPlayPersistence.loadClusterSafeAreaRect(this)
+            ?: DiLink4ClusterDisplay.defaultSafeAreaRect(
+                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                AirPlayPersistence.loadClusterMarkerVerticalStep(this))
+        card.addView(label(getString(R.string.safe_area_mapping_summary,
+            rect.width, rect.height, rect.left, rect.top, 1920, 720), 14, MUTED))
+        card.addView(button(getString(R.string.cluster_safe_area_edit), false) {
+            openClusterSafeAreaEditor()
+        }, matchButton(10, 56))
+        card.addView(button(getString(R.string.cluster_safe_area_reset), false) {
+            AirPlayPersistence.clearClusterSafeAreaRect(this)
+            render()
+            reconnectForClusterMap()
+        }, matchButton(10, 56))
+        card.addView(label(getString(R.string.cluster_safe_area_hint), 14, MUTED))
+    }
+
+    private fun openClusterSafeAreaEditor() {
+        val initial = AirPlayPersistence.loadClusterSafeAreaRect(this)
+            ?: DiLink4ClusterDisplay.defaultSafeAreaRect(
+                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                AirPlayPersistence.loadClusterMarkerVerticalStep(this))
+        val editor = SafeAreaEditorView(this).apply {
+            setBackgroundColor(Color.rgb(35, 39, 45))
+            setRect(initial, 1920, 720)
+        }
+        val panel = column().apply { setPadding(dp(16), dp(8), dp(16), dp(8)) }
+        panel.addView(label(getString(R.string.cluster_safe_area_hint), 14, MUTED))
+        panel.addView(editor, LinearLayout.LayoutParams(-1, dp(240)))
+        editor.doOnLayout { view ->
+            view.layoutParams = view.layoutParams.apply { height = (view.width * 720 / 1920).coerceAtLeast(1) }
+        }
+        val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.cluster_safe_area_edit))
+            .setView(panel)
+            .setPositiveButton(getString(if (CarPlayBackgroundSession.hasSession())
+                R.string.apply_and_reconnect else R.string.save)) { _, _ ->
+                editor.currentRectForSource()?.let { AirPlayPersistence.saveClusterSafeAreaRect(this, it) }
+                render()
+                reconnectForClusterMap()
+            }.setNegativeButton(getString(R.string.cancel), null).create()
+        dialog.show()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.9f).toInt(), -2)
+    }
+
     private fun reconnectForClusterMap() {
         if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
     }
