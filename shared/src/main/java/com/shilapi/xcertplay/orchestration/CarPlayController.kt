@@ -1428,11 +1428,17 @@ class CarPlayController(
     }
 
     private fun checkIphoneAvailability() {
-        if (closed || phase != Phase.IPHONE) return
-        val device = iphoneHost.discover().firstOrNull()
+        val expectedPhase = phase
+        if (closed || (expectedPhase != Phase.IPHONE && expectedPhase != Phase.REENUMERATION)) return
+        // DiLink can refresh its device list without delivering a new attach broadcast.
+        // Do not reuse the pre-transition descriptor set until it exposes CarPlay interfaces.
+        val device = iphoneHost.discover().firstOrNull {
+            expectedPhase != Phase.REENUMERATION || IphoneCarPlayConfiguration.find(it) != null
+        }
         if (device == null) {
-            onStatus(CarPlayStatus.WaitingForIphone)
-            scheduleAvailabilityPoll(Phase.IPHONE, ::checkIphoneAvailability)
+            onStatus(if (expectedPhase == Phase.REENUMERATION) CarPlayStatus.WaitingForReenumeration
+                else CarPlayStatus.WaitingForIphone)
+            scheduleAvailabilityPoll(expectedPhase, ::checkIphoneAvailability)
         } else {
             debugLog(
                 "wired iPhone discovered vid=0x${device.vendorId.toString(16)} " +
@@ -1542,10 +1548,15 @@ class CarPlayController(
         reenumerationAttempts += 1
         connectionDiagnostic("USB transition requested count=$reenumerationAttempts")
         onStatus(CarPlayStatus.SelectingConfiguration)
+        val generation = availabilityPollGeneration.get()
         iphoneHost.requestCarPlayReenumerationAsync(device, executor) { transition ->
+            if (closed || phase != Phase.REENUMERATION || generation != availabilityPollGeneration.get())
+                return@requestCarPlayReenumerationAsync
             when (transition) {
-                IphoneUsbHost.TransitionResult.ReenumerationRequested ->
+                IphoneUsbHost.TransitionResult.ReenumerationRequested -> {
                     onStatus(CarPlayStatus.WaitingForReenumeration)
+                    scheduleAvailabilityPoll(Phase.REENUMERATION, ::checkIphoneAvailability)
+                }
                 is IphoneUsbHost.TransitionResult.Failed -> fail(transition.error)
             }
         }

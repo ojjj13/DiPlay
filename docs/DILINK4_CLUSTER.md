@@ -59,9 +59,17 @@ Controls provide manual compensation, not a verified fix for intermittent colour
 
 ## Validation status
 
+Test 16 also adds descriptor polling after a successful USB mode-transition request. Previously
+that state waited exclusively for an attach broadcast; the initial discovery state already polled.
+The fallback rechecks every two seconds and proceeds only when a matching device exposes a
+complete CarPlay configuration. It still requests/checks Android USB permission normally.
+Phase/generation checks stop stale polls after attachment, opening data paths, restart or close.
+A regression test refreshes descriptors without any attach event and verifies one data-path open.
+This fixes a confirmed discovery gap, not a proven diagnosis of every vehicle reconnect failure.
+
 - Upstream baseline: `v0.2.11`, commit `6014025c653c4dae88d319ce446e0bf1ddb658ea`.
 - Local public-tree scan and whitespace checks pass. Changed resource/manifest XML parses; one launcher remains and the cluster Activity keeps its exported, independent task configuration.
 - All changed Kotlin source/test files parse without errors. Changed resource XML parses and has unique resource names.
 - APK compilation, unit tests and lint have **not run for this build**. Local Gradle bootstrap failed to download through the execution environment’s network connection.
 - The fork workflow targets the new branch, runs unit tests/lint, verifies the signed test APK and runtime assets, and publishes only after these checks succeed. Its upstream input is the SHA-256-pinned official 0.2.11 APK.
-- Test 15 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.
+- Test 16 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.
