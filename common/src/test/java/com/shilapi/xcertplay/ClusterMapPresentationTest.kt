@@ -102,7 +102,7 @@ class ClusterMapPresentationTest {
         AirPlayPersistence.saveClusterMapEnabled(context, false)
         val id = display(DiLink4ClusterDisplay.NAME, "w1920dp-h720dp-mdpi")
         try {
-            assertFalse(com.shilapi.xcertplay.hud.BydOutputSettings.available(context))
+            assertFalse(com.shilapi.xcertplay.hud.BydOutputSettings.navigationAvailable(context))
             val report = ClusterMapPresentation.diagnosticReport(context)
             assertTrue(report.contains("clusterEnabled=false"))
             assertTrue(report.contains("navigationReceiverAvailable=false"))
