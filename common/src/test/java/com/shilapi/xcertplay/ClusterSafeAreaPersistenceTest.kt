@@ -24,6 +24,15 @@ class ClusterSafeAreaPersistenceTest {
         assertEquals(main, AirPlayPersistence.loadSafeAreaRect(context, 1920, 720))
     }
 
+    @Test fun mapWithBuiltInTurnCardDefaultsButSavedChoicesRemain() {
+        val context = RuntimeEnvironment.getApplication()
+        assertEquals(com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.Content.INSTRUMENTS,
+            AirPlayPersistence.loadClusterContent(context))
+        AirPlayPersistence.saveClusterContent(context, com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.Content.MAP)
+        assertEquals(com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.Content.MAP,
+            AirPlayPersistence.loadClusterContent(context))
+    }
+
     @Test fun fullscreenDefaultsOffButSavedChoicesRemain() {
         val context = RuntimeEnvironment.getApplication()
         assertFalse(AirPlayPersistence.loadHideTopBar(context))

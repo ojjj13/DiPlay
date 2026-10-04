@@ -33,7 +33,7 @@ Fullscreen now defaults off for unset preferences. Existing saved top/bottom bar
 - OEM song display, L1 coordination and full decoder-mirroring changes are not included.
 - No picture-filter changes.
 
-Test 9 direct cluster placement and remembered USB permissions were confirmed by the user. Test 13 editor placement and 1920×720 geometry still require vehicle testing. Automated checks cannot establish visible placement or firmware compatibility.
+Test 9 direct cluster placement and remembered USB permissions were confirmed by the user. Test 14 uses a standalone safe-area dialog so the main-screen editor has allocated drawing space, while retaining the live cluster outline. Map with the built-in turn card is now the default for an unset dashboard choice. Saved choices remain unchanged. Editor placement and 1920×720 geometry still require vehicle testing. Automated checks cannot establish visible placement or firmware compatibility.
 
 ## USB reconnect
 
@@ -50,4 +50,4 @@ The ordinary permission grant expires on disconnect. This change enables Android
 - All changed Kotlin source/test files parse without errors. Changed resource XML parses and has unique resource names.
 - APK compilation, unit tests and lint have **not run for this build**. Local Gradle bootstrap failed to download through the execution environment’s network connection.
 - The fork workflow targets the new branch, runs unit tests/lint, verifies the signed test APK and runtime assets, and publishes only after these checks succeed. Its upstream input is the SHA-256-pinned official 0.2.11 APK.
-- Test 13 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.
+- Test 14 is authorized for publication to ojjj13/DiPlay. APK validation is pending the branch workflow; vehicle acceptance remains separate from automated checks.

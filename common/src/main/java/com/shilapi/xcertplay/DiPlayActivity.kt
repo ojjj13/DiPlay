@@ -4,6 +4,8 @@ package com.shilapi.xcertplay
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.Dialog
+import android.view.Window
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
@@ -60,7 +62,7 @@ import kotlin.math.roundToInt
 class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var page = "home"
-    private var clusterSafeAreaDialog: AlertDialog? = null
+    private var clusterSafeAreaDialog: Dialog? = null
     private var pendingCarHotspotSetup = false
     private var setupError: String? = null
     private var status: TextView? = null
@@ -1892,29 +1894,29 @@ class DiPlayActivity : ComponentActivity() {
             setBackgroundColor(Color.rgb(35, 39, 45))
             setRect(initial, 1920, 720)
         }
-        val panel = column().apply { setPadding(dp(16), dp(8), dp(16), dp(8)) }
-        panel.addView(label(getString(R.string.cluster_safe_area_live_hint), 14, MUTED))
-        val previewFrame = FrameLayout(this)
-        previewFrame.addView(editor, FrameLayout.LayoutParams(1, 1, Gravity.CENTER))
-        panel.addView(previewFrame, LinearLayout.LayoutParams(-1, 0, 1f))
-        previewFrame.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
-            val fit = minOf((view.width - dp(16)).coerceAtLeast(1) / 1920f,
-                (view.height - dp(16)).coerceAtLeast(1) / 720f)
-            val w = (1920 * fit).toInt().coerceAtLeast(1)
-            val h = (720 * fit).toInt().coerceAtLeast(1)
-            if (editor.layoutParams.width != w || editor.layoutParams.height != h) {
-                editor.layoutParams = FrameLayout.LayoutParams(w, h, Gravity.CENTER)
-            }
+        // A standalone dialog gives the weighted preview an exact available height.
+        // AlertDialog's wrap-content custom panel can collapse it to zero.
+        val dialog = Dialog(this).apply { requestWindowFeature(Window.FEATURE_NO_TITLE) }
+        val panel = column().apply {
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            setBackgroundColor(Color.rgb(35, 39, 45))
         }
+        panel.addView(label(getString(R.string.cluster_safe_area_edit), 18, Color.WHITE, true))
+        panel.addView(label(getString(R.string.cluster_safe_area_live_hint), 14, MUTED))
+        panel.addView(ClusterSafeAreaPreviewFrame(this, editor), LinearLayout.LayoutParams(-1, 0, 1f))
+        val actions = row()
+        actions.addView(button(getString(R.string.cancel), false) { dialog.dismiss() },
+            LinearLayout.LayoutParams(0, dp(56), 1f))
+        actions.addView(button(getString(if (CarPlayBackgroundSession.hasSession())
+            R.string.apply_and_reconnect else R.string.save), true) {
+            editor.currentRectForSource()?.let { AirPlayPersistence.saveClusterSafeAreaRect(this, it) }
+            dialog.dismiss()
+            render()
+            reconnectForClusterMap()
+        }, LinearLayout.LayoutParams(0, dp(56), 1f))
+        panel.addView(actions)
+        dialog.setContentView(panel, ViewGroup.LayoutParams(-1, -1))
         editor.onRectChanged = { ClusterActivityOutput.updateSafeAreaPreview(previewOwner, it) }
-        val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.cluster_safe_area_edit))
-            .setView(panel)
-            .setPositiveButton(getString(if (CarPlayBackgroundSession.hasSession())
-                R.string.apply_and_reconnect else R.string.save)) { _, _ ->
-                editor.currentRectForSource()?.let { AirPlayPersistence.saveClusterSafeAreaRect(this, it) }
-                render()
-                reconnectForClusterMap()
-            }.setNegativeButton(getString(R.string.cancel), null).create()
         clusterSafeAreaDialog = dialog
         dialog.setOnDismissListener {
             editor.onRectChanged = null
