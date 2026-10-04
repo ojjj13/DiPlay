@@ -4,12 +4,14 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbConfiguration
 import android.hardware.usb.UsbInterface
 import android.os.Looper
+import android.content.ComponentName
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.orchestration.*
 import com.shilapi.xcertplay.transport.*
 import java.time.Duration
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.Before
 import org.junit.runner.RunWith
 import org.mockito.Mockito.*
 import org.robolectric.RobolectricTestRunner
@@ -22,6 +24,11 @@ import org.robolectric.annotation.LooperMode
 @Config(sdk = [29], manifest = Config.NONE)
 @LooperMode(LooperMode.Mode.PAUSED)
 class UsbReenumerationPollingTest {
+    @Before fun noVendorServiceInUsbFixture() {
+        val app: android.app.Application = RuntimeEnvironment.getApplication()
+        shadowOf(app).declareComponentUnbindable(ComponentName("com.ts.car.someip.service",
+            "com.ts.car.someip.service.manager.SomeIpServerService"))
+    }
     private fun controller(statuses: MutableList<CarPlayStatus>) = CarPlayController(
         RuntimeEnvironment.getApplication(),
         CarPlayRuntimeConfig(mfiTarget = MfiTarget.LOCAL, transport = CarPlayTransport.WIRED,
