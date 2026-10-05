@@ -7,6 +7,7 @@ import android.hardware.usb.UsbManager
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import com.shilapi.xcertplay.orchestration.CarPlayRuntimeConfig
 import com.shilapi.xcertplay.orchestration.CarPlayTransport
+import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import com.shilapi.xcertplay.orchestration.MfiTarget
 import org.junit.Assert.*
 import org.junit.Before
@@ -29,6 +30,7 @@ class HostUsbChargingTest {
         app.getSharedPreferences("xcertplay_airplay", Context.MODE_PRIVATE).edit().clear().commit()
         // No real connection is started. Select I2C to bypass private local authentication assets.
         AirPlayPersistence.saveMfiTarget(app, MfiTarget.I2C)
+        AirPlayPersistence.saveWirelessHotspotMode(app, WirelessHotspotMode.WIFI_P2P)
     }
 
     @Test fun usbLaunchPreservesWirelessSelection() {
