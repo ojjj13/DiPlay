@@ -1,7 +1,7 @@
 name: DiLink 4 cluster activity test APK
 on:
   push:
-    branches: [fix/dilink4-native-casting-test19]
+    branches: [fix/dilink4-calibration-test20]
   workflow_dispatch:
 permissions:
   contents: write
@@ -36,8 +36,8 @@ jobs:
             chmod 600 "$RUNNER_TEMP/runtime-assets/offline-mfi/$name"
           done
           echo "DIPLAY_AUTH_ASSETS_DIR=$RUNNER_TEMP/runtime-assets" >> "$GITHUB_ENV"
-      - name: Standalone APK (tests and lint passed on d8f7ce4)
-        run: ./gradlew :mobile:assembleStandaloneDebug --stacktrace
+      - name: Unit tests, lint and standalone APK
+        run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :mobile:lintDebug :mobile:assembleStandaloneDebug --stacktrace
       - name: Verify and package
         run: |
           mkdir -p delivery
@@ -69,4 +69,4 @@ jobs:
         run: |
           test_version="$(sed -n 's/^clusterTestVersion=//p' gradle.properties)"
           tag="v0.2.12-test.$test_version"
-          gh release create "$tag" delivery/* --target "$GITHUB_SHA" --prerelease --title "DiPlay 0.2.12 — DiLink 4 cluster test $test_version" --notes-file docs/CLUSTER-TEST-19.md
+          gh release create "$tag" delivery/* --target "$GITHUB_SHA" --prerelease --title "DiPlay 0.2.12 — DiLink 4 cluster test $test_version" --notes-file docs/CLUSTER-TEST-20.md
