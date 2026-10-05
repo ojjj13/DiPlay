@@ -467,6 +467,11 @@ class DiPlayActivity : ComponentActivity() {
             })
         }
         section(content, getString(R.string.connection_setup), R.drawable.ic_dp_connection) { card ->
+            toggle(card, getString(R.string.keep_wireless_on_usb_title),
+                getString(R.string.keep_wireless_on_usb_description),
+                AirPlayPersistence.loadKeepWirelessOnUsb(this)) {
+                AirPlayPersistence.saveKeepWirelessOnUsb(this, it)
+            }
             card.addView(label(getString(R.string.choose_how_to_connect_follow_the_setup_steps_and_save_your), 16, MUTED))
             card.addView(button(getString(R.string.open_connection_setup), false) { page = "connection"; render() }, matchButton(12, 60))
         }

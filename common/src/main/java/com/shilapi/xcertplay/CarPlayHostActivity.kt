@@ -481,7 +481,7 @@ class CarPlayHostActivity : ComponentActivity() {
         MapMirrors.sink = mirrorSink
         MapMirrors.onChanged = mirrorsChanged
         languagePreferenceAtCreate = AppLocale.preference(this)
-        if (isIphoneUsbAttachment(intent)) {
+        if (isIphoneUsbAttachment(intent) && !AirPlayPersistence.loadKeepWirelessOnUsb(this)) {
             AirPlayPersistence.saveWirelessEnabled(this, false)
         }
         if (runCatching { DiPlayBootstrap.ensure(this, AirPlayPersistence.loadMfiTarget(this)) }.isFailure) {
@@ -680,7 +680,9 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (isIphoneUsbAttachment(intent) && wirelessEnabled) {
+        // USB can be used just for charging when the user has opted to keep wireless.
+        if (isIphoneUsbAttachment(intent) && wirelessEnabled &&
+            !AirPlayPersistence.loadKeepWirelessOnUsb(this)) {
             shutdown(false, "switching to USB") {
                 AirPlayPersistence.saveWirelessEnabled(this, false)
                 startActivity(Intent(this, CarPlayHostActivity::class.java))

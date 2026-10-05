@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="keep_wireless_on_usb_title">Keep wireless CarPlay while charging via USB</string>
+    <string name="keep_wireless_on_usb_description">Stay in wireless mode when you plug in your iPhone. Choose Connect using cable to switch to wired CarPlay. Off by default.</string>
+</resources>

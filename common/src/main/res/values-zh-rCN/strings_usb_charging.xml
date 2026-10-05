@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="keep_wireless_on_usb_title">USB 充电时保持无线 CarPlay</string>
+    <string name="keep_wireless_on_usb_description">插入 iPhone 后继续使用无线模式。如需有线 CarPlay，请选择通过数据线连接。默认关闭。</string>
+</resources>
