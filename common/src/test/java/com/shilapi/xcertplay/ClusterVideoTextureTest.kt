@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [29], manifest = Config.NONE)
 class ClusterVideoTextureTest {
     @Test fun actualClusterTextureFollowsLivePictureControlsAndStopsListeningOnClose() {
-        val context = RuntimeEnvironment.getApplication<android.app.Application>()
+        val context = RuntimeEnvironment.getApplication()
         val prefs = CarPlayPicture.preferences(context)
         CarPlayPicture.showOriginal(false)
         CarPlayPicture.reset(prefs)
