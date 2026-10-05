@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import com.shilapi.xcertplay.orchestration.CarPlayRuntimeConfig
 import com.shilapi.xcertplay.orchestration.CarPlayTransport
@@ -18,18 +17,18 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import org.robolectric.annotation.Implementation
-import org.robolectric.annotation.Implements
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** USB charging must not change the user's selected transport or tear down its controller. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [29], manifest = Config.NONE, shadows = [HostUsbChargingTest.Bootstrap::class])
+@Config(sdk = [29], manifest = Config.NONE)
 class HostUsbChargingTest {
     private val app get() = RuntimeEnvironment.getApplication()
 
     @Before fun reset() {
         app.getSharedPreferences("xcertplay_airplay", Context.MODE_PRIVATE).edit().clear().commit()
+        // No real connection is started. Select I2C to bypass private local authentication assets.
+        AirPlayPersistence.saveMfiTarget(app, MfiTarget.I2C)
     }
 
     @Test fun usbLaunchPreservesWirelessSelection() {
@@ -109,9 +108,4 @@ class HostUsbChargingTest {
         CarPlayHostActivity::class.java.getDeclaredMethod("createRuntimeConfig")
             .apply { isAccessible = true }.invoke(host) as CarPlayRuntimeConfig
 
-    @Implements(DiPlayBootstrap::class, isInAndroidSdk = false)
-    internal class Bootstrap {
-        @Implementation fun ensure(context: Context, mfiTarget: MfiTarget) = Unit
-        @Implementation fun deviceId(identity: AirPlayIdentity): String = "02:00:00:00:00:01"
-    }
 }
