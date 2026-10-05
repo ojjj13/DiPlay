@@ -8,4 +8,4 @@ Adds regression coverage for mode suppression and deferred recovery, plus routin
 
 Test while parked: keep stock-map holding Off, open native full-screen cluster casting, enable the ADB cluster route, authorize if needed, then connect the iPhone and open Apple Maps. Check whether casting stays full screen and the CarPlay cluster map appears. Export diagnostics after a failure. This is an unverified vehicle fix, not proof that the AMap adapter is the cause.
 
-The validation workflow runs shared/common unit tests, mobile lint and a source-only APK build. This APK contains no CarPlay authentication input. An installable standalone build and release publication remain pending approval.
+Shared/common unit tests, mobile lint and the source-only APK build passed on d8f7ce4. The authorized release workflow builds the same source as a standalone APK and verifies its signature, test19 version and runtime assets before publishing. Runtime inputs remain outside the source tree.
