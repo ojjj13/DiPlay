@@ -58,6 +58,8 @@ internal object AdbClusterRouter {
         var success = false
         val text = buildString {
             appendLine("ADB direct cluster launch capturedAt=${java.util.Date()}")
+            appendLine("diLink3ModeSwitchSuppressed=" + AirPlayPersistence.loadAdbClusterEnabled(context))
+            appendLine("stockMapHoldMode=" + com.shilapi.xcertplay.hud.BydOutputSettings.oemClusterHold(context))
             try {
                 LocalAdb(AdbKeys.load(context)).use { adb ->
                     val access = adb.connect(mayAsk = false)
