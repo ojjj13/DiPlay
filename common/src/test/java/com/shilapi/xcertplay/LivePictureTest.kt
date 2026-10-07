@@ -30,6 +30,7 @@ class LivePictureTest {
     }
     @Before fun reset() {
         CarPlayPicture.showOriginal(false)
+        CarPlayPicture.setNight(false)
         CarPlayPicture.preferences(context).edit().clear().commit()
     }
     @Test fun changesReachBothTexturesAndOriginalComparisonDoesNotOverwriteSettings() {
@@ -59,6 +60,41 @@ class LivePictureTest {
             assertNull(cluster.applied)
         } finally {
             mainBinding.close(); clusterBinding.close(); CarPlayPicture.showOriginal(false)
+        }
+    }
+    @Test fun nightProfileSwitchesBothTexturesWithoutChangingDaySettings() {
+        val prefs = CarPlayPicture.preferences(context)
+        prefs.edit().putInt(CarPlayPicture.WARMTH, -30).commit()
+        val dayMatrix = CarPlayPicture.matrix(prefs).array.copyOf()
+        val main = RecordingTexture()
+        val cluster = RecordingTexture()
+        val mainBinding = CarPlayPicture.Binding(main)
+        val clusterBinding = CarPlayPicture.Binding(cluster)
+        try {
+            assertNotNull(main.applied)
+            CarPlayPicture.setNight(true)
+            assertNull(main.applied)
+            assertNull(cluster.applied)
+            prefs.edit().putInt(CarPlayPicture.preferenceKey(CarPlayPicture.WARMTH, true), 40).apply()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertNotNull(main.applied)
+            assertNotNull(cluster.applied)
+            assertArrayEquals(dayMatrix, CarPlayPicture.matrix(prefs).array, 0f)
+            CarPlayPicture.showOriginal(true)
+            assertNull(main.applied)
+            assertNull(cluster.applied)
+            CarPlayPicture.showOriginal(false)
+            assertNotNull(cluster.applied)
+            CarPlayPicture.reset(prefs, true)
+            shadowOf(Looper.getMainLooper()).idle()
+            assertNull(cluster.applied)
+            assertEquals(-30, CarPlayPicture.value(prefs, CarPlayPicture.WARMTH))
+            CarPlayPicture.setNight(false)
+            assertNotNull(main.applied)
+            assertNotNull(cluster.applied)
+            assertArrayEquals(dayMatrix, CarPlayPicture.matrix(prefs).array, 0f)
+        } finally {
+            mainBinding.close(); clusterBinding.close(); CarPlayPicture.setNight(false)
         }
     }
     @Test fun panelSliderSavesImmediatelyAndResetClearsOriginalComparison() {

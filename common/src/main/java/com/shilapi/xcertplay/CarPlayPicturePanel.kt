@@ -11,6 +11,22 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
     private val prefs = CarPlayPicture.preferences(context)
     private val controls = mutableMapOf<String, Pair<TextView, SeekBar>>()
     private val original = Switch(context)
+    private val profile = text("")
+    private val refresh: () -> Unit = {
+        profile.text = context.getString(if (CarPlayPicture.night) R.string.picture_night_profile else R.string.picture_day_profile)
+        controls.forEach { (key, pair) ->
+            pair.second.progress = CarPlayPicture.value(prefs, key, CarPlayPicture.night) - CarPlayPicture.range(key).first
+        }
+    }
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        CarPlayPicture.addListener(refresh)
+        refresh()
+    }
+    override fun onDetachedFromWindow() {
+        CarPlayPicture.removeListener(refresh)
+        super.onDetachedFromWindow()
+    }
     private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
     private fun text(value: String) = TextView(context).apply {
         text = value; textSize = 15f; setTextColor(Color.WHITE)
@@ -21,6 +37,7 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
         setBackgroundColor(Color.argb(235, 12, 17, 27))
         isClickable = true
         addView(text(context.getString(R.string.picture_adjustments)))
+        addView(profile)
         val rows = LinearLayout(context).apply { orientation = VERTICAL }
         val scroll = ScrollView(context).apply { addView(rows) }
         addView(scroll, LayoutParams(-1, 0, 1f))
@@ -32,15 +49,15 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
             val range = CarPlayPicture.range(key)
             val slider = SeekBar(context).apply {
                 max = range.last - range.first
-                progress = CarPlayPicture.value(prefs, key) - range.first
+                progress = CarPlayPicture.value(prefs, key, CarPlayPicture.night) - range.first
                 contentDescription = context.getString(labels[index])
             }
             fun updateLabel(value: Int) { label.text = "${context.getString(labels[index])}: $value" }
-            updateLabel(CarPlayPicture.value(prefs, key))
+            updateLabel(CarPlayPicture.value(prefs, key, CarPlayPicture.night))
             slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seek: SeekBar, progress: Int, fromUser: Boolean) {
                     updateLabel(progress + range.first)
-                    if (fromUser) prefs.edit().putInt(key, progress + range.first).apply()
+                    if (fromUser) prefs.edit().putInt(CarPlayPicture.preferenceKey(key, CarPlayPicture.night), progress + range.first).apply()
                 }
                 override fun onStartTrackingTouch(seek: SeekBar) = Unit
                 override fun onStopTrackingTouch(seek: SeekBar) = Unit
@@ -63,7 +80,7 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
             text = context.getString(R.string.picture_reset); isAllCaps = false
             setOnClickListener {
                 original.isChecked = false
-                CarPlayPicture.reset(prefs)
+                CarPlayPicture.reset(prefs, CarPlayPicture.night)
                 controls.forEach { (key, pair) ->
                     pair.second.progress = CarPlayPicture.defaultValue(key) - CarPlayPicture.range(key).first
                 }
@@ -74,5 +91,6 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
             setOnClickListener { close() }
         }, LayoutParams(0, dp(48), 1f))
         addView(actions)
+        refresh()
     }
 }
