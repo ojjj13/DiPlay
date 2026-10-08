@@ -1785,6 +1785,29 @@ class CarPlayHostActivity : ComponentActivity() {
         }
 
         content.addView(
+            settingsSwitchRow(
+                "Force BT.709 (Test 24)",
+                getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("bt709", false),
+                "Request BT.709 during MediaCodec configuration",
+            ) {
+                getSharedPreferences("test24_decoder", MODE_PRIVATE).edit().putBoolean("bt709", it).apply()
+                appendLog("Test24 BT.709 request=$it; applies on reconnect")
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) },
+        )
+        content.addView(
+            settingsSwitchRow(
+                "Qualcomm VPP probe (Test 24)",
+                getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("vpp", false),
+                "Probe vendor VPP support; request enable only when exposed by decoder",
+            ) {
+                getSharedPreferences("test24_decoder", MODE_PRIVATE).edit().putBoolean("vpp", it).apply()
+                appendLog("Test24 Qualcomm VPP probe=$it; applies on reconnect")
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) },
+        )
+
+        content.addView(
             buildSafeAreaSection(),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -3545,6 +3568,8 @@ class CarPlayHostActivity : ComponentActivity() {
             videoWidth = videoWidth,
             videoHeight = videoHeight,
             preferSoftwareHevcDecoder = hevcSoftwareDecoderEnabled,
+            forceBt709 = getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("bt709", false),
+            probeQualcommVpp = getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("vpp", false),
             advancedAudioChannelMapping = advancedAudioChannelMapping,
             audioFocusEnabled = AirPlayPersistence.loadAudioFocusEnabled(this),
             mediaChannel = AirPlayPersistence.loadMediaAudioChannel(this),
