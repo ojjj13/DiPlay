@@ -355,6 +355,32 @@ class CarPlayHostSettingsTest {
         assertEquals(edited, AirPlayPersistence.loadSafeAreaRect(activity, 1920, 942))
     }
 
+    @Test fun decoderColorSwitchesSaveTogetherAndCancelRestoresSavedValues() {
+        assertFalse(AirPlayPersistence.loadForceBt709(activity))
+        assertFalse(AirPlayPersistence.loadQualcommVpp(activity))
+        invoke("openSettingsMenu")
+        fun toggle(id: Int) = views(menu()).filterIsInstance<android.widget.Switch>()
+            .first { it.contentDescription == activity.getString(id) }
+        toggle(R.string.force_bt709).isChecked = true
+        toggle(R.string.qualcomm_vpp).isChecked = true
+        assertFalse(AirPlayPersistence.loadForceBt709(activity))
+        assertFalse(AirPlayPersistence.loadQualcommVpp(activity))
+        invoke("cancelSettingsEdits")
+        assertEquals(false, field("forceBt709"))
+        assertEquals(false, field("qualcommVpp"))
+        invoke("openSettingsMenu")
+        toggle(R.string.force_bt709).isChecked = true
+        toggle(R.string.qualcomm_vpp).isChecked = true
+        invoke("persistMenuSettings")
+        assertTrue(AirPlayPersistence.loadForceBt709(activity))
+        assertTrue(AirPlayPersistence.loadQualcommVpp(activity))
+        toggle(R.string.force_bt709).isChecked = false
+        toggle(R.string.qualcomm_vpp).isChecked = false
+        invoke("cancelSettingsEdits")
+        assertEquals(true, field("forceBt709"))
+        assertEquals(true, field("qualcommVpp"))
+    }
+
     private fun resizeWindow(width: Int, height: Int) {
         val sizeClass = Class.forName("com.shilapi.xcertplay.CarPlayHostActivity\$DisplaySize")
         val size = sizeClass.getDeclaredConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)

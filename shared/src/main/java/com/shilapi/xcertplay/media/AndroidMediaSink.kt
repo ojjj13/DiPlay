@@ -129,8 +129,6 @@ class AndroidMediaSink(
     private val videoWidth: Int = 1280,
     private val videoHeight: Int = 720,
     private val preferSoftwareHevcDecoder: Boolean = false,
-    private val forceBt709: Boolean = false,
-    private val probeQualcommVpp: Boolean = false,
     private val advancedAudioChannelMapping: Boolean = false,
     private val audioFocusEnabled: Boolean = false,
     private val mediaChannel: Int = 0,
@@ -142,6 +140,8 @@ class AndroidMediaSink(
     private val onAudioDiagnostic: (String) -> Unit = {},
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
+    private val forceBt709: Boolean = false,
+    private val qualcommVpp: Boolean = false,
 ) : MediaSink {
     private val appContext = context?.applicationContext
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
@@ -379,7 +379,7 @@ class AndroidMediaSink(
         videoHeight,
         preferSoftwareHevcDecoder,
         forceBt709,
-        probeQualcommVpp,
+        qualcommVpp,
         requestKeyFrame = { requestVideoRecovery(type) },
         report = { videoDiagnosticHandlers[type]?.invoke(it) },
         statsLabel = statsLabel,
@@ -412,7 +412,7 @@ private class VideoDecoder(
     private val height: Int,
     private val preferSoftwareHevcDecoder: Boolean,
     private val forceBt709: Boolean,
-    private val probeQualcommVpp: Boolean,
+    private val qualcommVpp: Boolean,
     private val requestKeyFrame: () -> Unit,
     private val report: (String) -> Unit,
     statsLabel: String? = null,
@@ -525,6 +525,9 @@ private class VideoDecoder(
         val attempts = listOf(
             DecoderAttempt(codecName = null, tuned = true),
             DecoderAttempt(codecName = null, tuned = false),
+            // A rejected vendor/color request must not prevent ordinary playback.
+            DecoderAttempt(codecName = null, tuned = true, colorExperiments = false),
+            DecoderAttempt(codecName = null, tuned = false, colorExperiments = false),
         ) + softwareDecoderName(mime)?.let { listOf(DecoderAttempt(it, tuned = false)) }.orEmpty()
         var next: MediaCodec? = null
         for (attempt in attempts) {
@@ -546,16 +549,17 @@ private class VideoDecoder(
         }
     }
 
-    private data class DecoderAttempt(val codecName: String?, val tuned: Boolean)
+    private data class DecoderAttempt(
+        val codecName: String?,
+        val tuned: Boolean,
+        val colorExperiments: Boolean = true,
+    )
 
     private fun buildFormat(mime: String, csd: List<ByteArray>, tuned: Boolean): MediaFormat =
         MediaFormat.createVideoFormat(mime, width, height).apply {
             if (tuned) {
                 setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_INPUT_SIZE)
                 setInteger(MediaFormat.KEY_PRIORITY, 0)
-            }
-            if (forceBt709 && tuned) {
-                setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT709)
             }
             csd.forEachIndexed { index, bytes -> setByteBuffer("csd-$index", ByteBuffer.wrap(bytes)) }
         }
@@ -571,37 +575,20 @@ private class VideoDecoder(
             val format = buildFormat(mime, csd, attempt.tuned)
             val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime)
             candidate = codec
-            if (probeQualcommVpp) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val names = runCatching { codec.supportedVendorParameters }.getOrDefault(emptyList())
-                    val vppNames = names.filter { it.contains("vpp", ignoreCase = true) }
-                    report("Qualcomm VPP probe decoder=${codec.name} vendorParameters=${vppNames.joinToString().ifEmpty { "none" }}")
-                    // Only attempt known enable switches explicitly reported by this device.
-                    // Values / behavior remain firmware-specific; no unsupported key is injected.
-                    val enableKey = vppNames.firstOrNull {
-                        it.endsWith(".enable", ignoreCase = true) ||
-                            it.endsWith(".enabled", ignoreCase = true)
-                    }
-                    if (enableKey != null) {
-                        runCatching { format.setInteger(enableKey, 1) }
-                            .onSuccess { report("Qualcomm VPP requested key=$enableKey value=1") }
-                            .onFailure { report("Qualcomm VPP setup rejected: ${it.javaClass.simpleName}") }
-                    } else {
-                        report("Qualcomm VPP not enabled: no supported enable parameter")
-                    }
-                } else report("Qualcomm VPP probe requires Android 12+")
-            }
-            if (forceBt709) report("BT.709 request=${attempt.tuned} decoder=${codec.name}")
             if (attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
                 codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")) {
                 format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
             }
+            applyColorExperiments(codec, format, attempt.colorExperiments)
             codec.configure(format, surface, null, 0)
             codec.start()
+            report("decoder color request configured forceBt709=${forceBt709 && attempt.colorExperiments} " +
+                "vppRequested=${if (attempt.colorExperiments) qualcommVpp else "fallback"}; " +
+                "configuration accepted; actual vendor processing is not confirmed")
             codec
         } catch (error: Exception) {
             runCatching { candidate?.release() }
-            reportFailure("stage=configure tuned=${attempt.tuned} mime=$mime", error)
+            reportFailure("stage=configure tuned=${attempt.tuned} colorExperiments=${attempt.colorExperiments} mime=$mime", error)
             Log.w(
                 TAG,
                 "video decoder configure failed name=${attempt.codecName ?: "default"} " +
@@ -610,6 +597,33 @@ private class VideoDecoder(
             )
             null
         }
+    }
+
+    private fun applyColorExperiments(codec: MediaCodec, format: MediaFormat, enabled: Boolean) {
+        if (!enabled) {
+            report("decoder color experiments bypassed after configuration failure")
+            return
+        }
+        val codecName = codec.name
+        val qualcomm = DecoderColorOptions.isQualcommHardware(codecName)
+        if (!qualcomm) {
+            DecoderColorOptions.apply(format, codecName, forceBt709, qualcommVpp, emptyList())
+            report("decoder color request forceBt709=$forceBt709 VPP skipped: non-Qualcomm decoder=$codecName")
+            return
+        }
+        // Enumeration is only available on API 31+. DiLink 4's API 29 can only
+        // make a best-effort legacy vendor request; configure success is not proof.
+        val supported = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            runCatching { codec.supportedVendorParameters }.getOrNull()
+        } else null
+        val mode = DecoderColorOptions.apply(format, codecName, forceBt709, qualcommVpp, supported)
+        if (mode == null) {
+            report("decoder VPP unsupported decoder=$codecName requested=$qualcommVpp")
+            return
+        }
+        report("decoder color request forceBt709=$forceBt709 " +
+            "${DecoderColorOptions.VPP_MODE_KEY}=$mode " +
+            "support=${if (supported == null) "unknown (legacy API or query failed)" else "advertised"} decoder=$codecName")
     }
 
     private fun softwareDecoderName(mime: String): String? {
@@ -742,7 +756,11 @@ private class VideoDecoder(
             "crop=${format.intOrNull("crop-left")},${format.intOrNull("crop-top")}," +
             "${format.intOrNull("crop-right")},${format.intOrNull("crop-bottom")} " +
             "stride=${format.intOrNull(MediaFormat.KEY_STRIDE)} slice=${format.intOrNull(MediaFormat.KEY_SLICE_HEIGHT)} " +
-            "color=${format.intOrNull(MediaFormat.KEY_COLOR_STANDARD)}/${format.intOrNull(MediaFormat.KEY_COLOR_RANGE)}/${format.intOrNull(MediaFormat.KEY_COLOR_TRANSFER)}")
+            "color=${format.intOrNull(MediaFormat.KEY_COLOR_STANDARD)}/${format.intOrNull(MediaFormat.KEY_COLOR_RANGE)}/${format.intOrNull(MediaFormat.KEY_COLOR_TRANSFER)} " +
+            "standard=${format.intOrNull(MediaFormat.KEY_COLOR_STANDARD)} " +
+            "range=${format.intOrNull(MediaFormat.KEY_COLOR_RANGE)} " +
+            "transfer=${format.intOrNull(MediaFormat.KEY_COLOR_TRANSFER)} " +
+            "requestedBt709=$forceBt709 requestedVpp=$qualcommVpp")
         Log.i(
             TAG,
             "video decoder output format " +
