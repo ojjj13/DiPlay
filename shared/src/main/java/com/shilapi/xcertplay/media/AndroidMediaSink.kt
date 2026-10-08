@@ -129,6 +129,8 @@ class AndroidMediaSink(
     private val videoWidth: Int = 1280,
     private val videoHeight: Int = 720,
     private val preferSoftwareHevcDecoder: Boolean = false,
+    private val forceBt709: Boolean = false,
+    private val probeQualcommVpp: Boolean = false,
     private val advancedAudioChannelMapping: Boolean = false,
     private val audioFocusEnabled: Boolean = false,
     private val mediaChannel: Int = 0,
@@ -376,6 +378,8 @@ class AndroidMediaSink(
         videoWidth,
         videoHeight,
         preferSoftwareHevcDecoder,
+        forceBt709,
+        probeQualcommVpp,
         requestKeyFrame = { requestVideoRecovery(type) },
         report = { videoDiagnosticHandlers[type]?.invoke(it) },
         statsLabel = statsLabel,
@@ -407,6 +411,8 @@ private class VideoDecoder(
     private val width: Int,
     private val height: Int,
     private val preferSoftwareHevcDecoder: Boolean,
+    private val forceBt709: Boolean,
+    private val probeQualcommVpp: Boolean,
     private val requestKeyFrame: () -> Unit,
     private val report: (String) -> Unit,
     statsLabel: String? = null,
@@ -548,6 +554,9 @@ private class VideoDecoder(
                 setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_INPUT_SIZE)
                 setInteger(MediaFormat.KEY_PRIORITY, 0)
             }
+            if (forceBt709 && tuned) {
+                setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT709)
+            }
             csd.forEachIndexed { index, bytes -> setByteBuffer("csd-$index", ByteBuffer.wrap(bytes)) }
         }
 
@@ -562,6 +571,27 @@ private class VideoDecoder(
             val format = buildFormat(mime, csd, attempt.tuned)
             val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime)
             candidate = codec
+            if (probeQualcommVpp) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val names = runCatching { codec.supportedVendorParameters }.getOrDefault(emptyList())
+                    val vppNames = names.filter { it.contains("vpp", ignoreCase = true) }
+                    report("Qualcomm VPP probe decoder=${codec.name} vendorParameters=${vppNames.joinToString().ifEmpty { "none" }}")
+                    // Only attempt known enable switches explicitly reported by this device.
+                    // Values / behavior remain firmware-specific; no unsupported key is injected.
+                    val enableKey = vppNames.firstOrNull {
+                        it.endsWith(".enable", ignoreCase = true) ||
+                            it.endsWith(".enabled", ignoreCase = true)
+                    }
+                    if (enableKey != null) {
+                        runCatching { format.setInteger(enableKey, 1) }
+                            .onSuccess { report("Qualcomm VPP requested key=$enableKey value=1") }
+                            .onFailure { report("Qualcomm VPP setup rejected: ${it.javaClass.simpleName}") }
+                    } else {
+                        report("Qualcomm VPP not enabled: no supported enable parameter")
+                    }
+                } else report("Qualcomm VPP probe requires Android 12+")
+            }
+            if (forceBt709) report("BT.709 request=${attempt.tuned} decoder=${codec.name}")
             if (attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
                 codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")) {
                 format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
