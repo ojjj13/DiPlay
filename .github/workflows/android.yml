@@ -24,6 +24,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Unit tests, lint and source-only debug build
         run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :home:testDebugUnitTest :mobile:lintDebug :home:lintDebug :maphost:lintDebug :mobile:assembleDebug :home:assembleDebug :maphost:assembleDebug --stacktrace
+      - name: Upload Test 24 APK
+        if: github.event_name == 'pull_request' && github.head_ref == 'feature/decoder-color-test24'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiPlay-Test24-APK
+          path: mobile/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
       - name: Test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -36,3 +43,30 @@ jobs:
             samples/home/build/reports/tests/
             samples/home/build/reports/lint-results-debug.html
             samples/maphost/build/reports/lint-results-debug.html
+
+  publish-test24:
+    needs: check
+    if: github.event_name == 'pull_request' && github.head_ref == 'feature/decoder-color-test24' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: DiPlay-Test24-APK
+          path: dist
+      - name: Publish Test 24 pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          apk=$(find dist -type f -name '*.apk' -print -quit)
+          test -n "$apk"
+          cp "$apk" dist/DiPlay-Test24.apk
+          gh release create "test24-${{ github.event.pull_request.head.sha }}" \
+            dist/DiPlay-Test24.apk \
+            --target "${{ github.event.pull_request.head.sha }}" \
+            --title "DiPlay Test 24" \
+            --notes "Experimental decoder color build: BT.709 override and Qualcomm VPP probe. Both options default off." \
+            --prerelease
