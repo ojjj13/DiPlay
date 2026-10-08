@@ -593,4 +593,7 @@
     <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели и для перемещения по экрану CarPlay. Только получает нажатия кнопок и не читает экран.</string>
     <string name="cluster_song_on_change">Песня только при смене</string>
     <string name="cluster_song_on_change_description">Новая песня видна на приборной панели 5 секунд, затем карточка очищается. Пауза и продолжение её не показывают.</string>
+    <string name="force_bt709">Принудительно BT.709 (экспериментально)</string>
+    <string name="qualcomm_vpp">Qualcomm VPP (экспериментально)</string>
+    <string name="decoder_color_experiments_hint">Применяется после сохранения и переподключения. VPP запрашивает автоматическое улучшение при включении и отключение обработки при выключении; зависит от устройства.</string>
 </resources>

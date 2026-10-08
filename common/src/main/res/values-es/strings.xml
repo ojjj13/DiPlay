@@ -593,4 +593,7 @@
     <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
     <string name="cluster_song_on_change">Canción solo al cambiar</string>
     <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
+    <string name="force_bt709">Forzar BT.709 (experimental)</string>
+    <string name="qualcomm_vpp">Qualcomm VPP (experimental)</string>
+    <string name="decoder_color_experiments_hint">Se aplica al guardar y reconectar. VPP solicita mejora automática al activarse y desactiva el procesamiento al apagarse; depende del dispositivo.</string>
 </resources>

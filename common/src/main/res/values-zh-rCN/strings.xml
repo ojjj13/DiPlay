@@ -636,4 +636,7 @@
     <string name="first_tcp_timeout">等待 iPhone 接入 CarPlay 超时</string>
     <string name="wireless_startup_retries_exhausted">自动重试已停止，请检查连接后手动重试。</string>
     <string name="retry_carplay_connection">重新连接</string>
+    <string name="force_bt709">强制 BT.709（实验）</string>
+    <string name="qualcomm_vpp">高通 VPP（实验）</string>
+    <string name="decoder_color_experiments_hint">保存并重连后生效。VPP 开启时请求高通硬件自动画质增强，关闭时请求停用；是否生效取决于设备支持。</string>
 </resources>

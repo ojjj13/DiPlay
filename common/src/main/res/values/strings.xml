@@ -636,4 +636,7 @@
     <string name="first_tcp_timeout">The iPhone did not connect to CarPlay in time</string>
     <string name="wireless_startup_retries_exhausted">Automatic retries stopped. Check the connection and retry manually.</string>
     <string name="retry_carplay_connection">Retry connection</string>
+    <string name="force_bt709">Force BT.709 (experimental)</string>
+    <string name="qualcomm_vpp">Qualcomm VPP (experimental)</string>
+    <string name="decoder_color_experiments_hint">Applies after saving and reconnecting. VPP requests automatic enhancement on supported Qualcomm hardware; disabled requests VPP off.</string>
 </resources>

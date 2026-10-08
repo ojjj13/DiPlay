@@ -327,6 +327,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var uiScalePercent = CarPlayUiScale.DEFAULT
     private var displayDiagnosticAttempt: String? = null
     private var hevcEnabled = true
+    private var forceBt709 = false
+    private var qualcommVpp = false
     private var hevcSoftwareDecoderEnabled = false
     private var advancedAudioChannelMappingSupported = false
     private var advancedAudioChannelMapping = false
@@ -552,6 +554,8 @@ class CarPlayHostActivity : ComponentActivity() {
         displayScaleTenths = CarPlayDisplayScale.sanitize((displayScalePercent + 5) / 10)
         // Size is now chosen only through CarPlaySize; ignore the canvas scale older builds stored.
         uiScalePercent = CarPlayUiScale.DEFAULT
+        forceBt709 = AirPlayPersistence.loadForceBt709(this)
+        qualcommVpp = AirPlayPersistence.loadQualcommVpp(this)
         hevcEnabled = AirPlayPersistence.loadHevcEnabled(this)
         hevcSoftwareDecoderEnabled =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
@@ -1784,28 +1788,38 @@ class CarPlayHostActivity : ComponentActivity() {
             )
         }
 
-        content.addView(
-            settingsSwitchRow(
-                "Force BT.709 (Test 24)",
-                getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("bt709", false),
-                "Request BT.709 during MediaCodec configuration",
-            ) {
-                getSharedPreferences("test24_decoder", MODE_PRIVATE).edit().putBoolean("bt709", it).apply()
-                appendLog("Test24 BT.709 request=$it; applies on reconnect")
-            },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) },
-        )
-        content.addView(
-            settingsSwitchRow(
-                "Qualcomm VPP probe (Test 24)",
-                getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("vpp", false),
-                "Probe vendor VPP support; request enable only when exposed by decoder",
-            ) {
-                getSharedPreferences("test24_decoder", MODE_PRIVATE).edit().putBoolean("vpp", it).apply()
-                appendLog("Test24 Qualcomm VPP probe=$it; applies on reconnect")
-            },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) },
-        )
+        fun decoderSwitch(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            row.addView(menuText(title, 20f, MENU_SECONDARY), LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(Switch(this).apply {
+                isChecked = checked
+                contentDescription = title
+                showText = false
+                thumbTintList = ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(MENU_ACCENT, MENU_SECONDARY),
+                )
+                trackTintList = ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(MENU_ACCENT_TRACK, MENU_TRACK_OFF),
+                )
+                setOnCheckedChangeListener { _, value -> onChange(value) }
+            }, LinearLayout.LayoutParams(-2, -2))
+            content.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+        }
+        decoderSwitch(getString(R.string.force_bt709), forceBt709) {
+            forceBt709 = it
+            appendLog("Force BT.709=$it; applies after saving and reconnecting")
+        }
+        decoderSwitch(getString(R.string.qualcomm_vpp), qualcommVpp) {
+            qualcommVpp = it
+            appendLog("Qualcomm VPP=$it; applies after saving and reconnecting")
+        }
+        content.addView(menuText(getString(R.string.decoder_color_experiments_hint), 14f, MENU_SECONDARY),
+            LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
 
         content.addView(
             buildSafeAreaSection(),
@@ -2009,6 +2023,8 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.savePhysicalSizeBasis(this, physicalSizeBasis)
         AirPlayPersistence.saveHevcEnabled(this, hevcEnabled)
         AirPlayPersistence.saveHevcSoftwareDecoderEnabled(this, hevcSoftwareDecoderEnabled)
+        AirPlayPersistence.saveForceBt709(this, forceBt709)
+        AirPlayPersistence.saveQualcommVpp(this, qualcommVpp)
         AirPlayPersistence.saveManufacturer(this, manufacturer)
         AirPlayPersistence.saveModel(this, model)
         AirPlayPersistence.saveOemLabel(this, oemLabel)
@@ -3568,8 +3584,8 @@ class CarPlayHostActivity : ComponentActivity() {
             videoWidth = videoWidth,
             videoHeight = videoHeight,
             preferSoftwareHevcDecoder = hevcSoftwareDecoderEnabled,
-            forceBt709 = getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("bt709", false),
-            probeQualcommVpp = getSharedPreferences("test24_decoder", MODE_PRIVATE).getBoolean("vpp", false),
+            forceBt709 = forceBt709,
+            qualcommVpp = qualcommVpp,
             advancedAudioChannelMapping = advancedAudioChannelMapping,
             audioFocusEnabled = AirPlayPersistence.loadAudioFocusEnabled(this),
             mediaChannel = AirPlayPersistence.loadMediaAudioChannel(this),
