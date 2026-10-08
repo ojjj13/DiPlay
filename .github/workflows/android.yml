@@ -24,6 +24,34 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Unit tests, lint and source-only debug build
         run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :home:testDebugUnitTest :mobile:lintDebug :home:lintDebug :maphost:lintDebug :mobile:assembleDebug :home:assembleDebug :maphost:assembleDebug --stacktrace
+      - name: Verify source-only Test 24 APK
+        if: github.event_name == 'pull_request' && github.head_ref == 'recovery/test24-20261008'
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, shutil, zipfile
+          source = pathlib.Path("mobile/build/outputs/apk/debug/mobile-debug.apk")
+          blocked = {".pk8", ".p7b", ".key", ".pem", ".p12", ".pfx", ".jks", ".keystore"}
+          private_block = re.compile(rb'-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----\s+[A-Za-z0-9+/=\r\n]{40,}')
+          with zipfile.ZipFile(source) as apk:
+              for name in apk.namelist():
+                  if "offline-mfi" in name.lower() or pathlib.PurePosixPath(name).suffix.lower() in blocked:
+                      raise SystemExit("Authentication or credential file in source-only APK: " + name)
+                  if not name.endswith("/") and private_block.search(apk.read(name)):
+                      raise SystemExit("Private key block in source-only APK: " + name)
+          pathlib.Path("source-only-delivery").mkdir()
+          shutil.copy2(source, "source-only-delivery/DiPlay-Test24-source-only.apk")
+          print("Source-only APK verified: no authentication assets or private-key containers.")
+          PY
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose source-only-delivery/DiPlay-Test24-source-only.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging source-only-delivery/DiPlay-Test24-source-only.apk | grep -F "versionName='0.2.12-dilink4-cluster-test24'"
+      - name: Upload source-only Test 24 APK
+        if: github.event_name == 'pull_request' && github.head_ref == 'recovery/test24-20261008'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiPlay-Test24-source-only-APK
+          path: source-only-delivery/DiPlay-Test24-source-only.apk
+          if-no-files-found: error
+          retention-days: 7
       - name: Require standalone authentication before Test 24 delivery
         if: github.event_name == 'pull_request' && github.head_ref == 'feature/decoder-color-test24'
         run: |
