@@ -9,4 +9,6 @@
     <string name="picture_saturation">Saturation</string>
     <string name="picture_warmth">Warmth</string>
     <string name="picture_reset">Reset picture</string>
+    <string name="picture_day_profile">Daytime picture · saved separately</string>
+    <string name="picture_night_profile">Night picture · saved separately</string>
 </resources>

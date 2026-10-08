@@ -9,4 +9,6 @@
     <string name="picture_saturation">饱和度</string>
     <string name="picture_warmth">色温</string>
     <string name="picture_reset">重置画面</string>
+    <string name="picture_day_profile">日间画面 · 独立保存</string>
+    <string name="picture_night_profile">夜间画面 · 独立保存</string>
 </resources>

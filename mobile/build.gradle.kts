@@ -17,8 +17,8 @@ android {
         applicationId = "com.shihab.diplay"
         minSdk = 28
         targetSdk = 37
-        versionCode = 30
-        versionName = "0.2.11"
+        versionCode = 31
+        versionName = "0.2.12"
 
     }
 
@@ -40,7 +40,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".hudtest"
-            versionNameSuffix = "-hud-test"
+            versionNameSuffix = "-dilink4-cluster-test${providers.gradleProperty("clusterTestVersion").get()}"
         }
         release {
             optimization {

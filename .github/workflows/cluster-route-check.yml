@@ -1,0 +1,72 @@
+name: DiLink 4 cluster activity test APK
+on:
+  push:
+    branches: [feature/night-picture-test23]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check public source
+        run: |
+          python3 scripts/check_public_tree.py
+          # Upstream includes shared picture controls and the consolidated cluster route.
+          test -f common/src/main/java/com/shilapi/xcertplay/CarPlayPicture.kt
+          test -f common/src/main/java/com/shilapi/xcertplay/ClusterVideoTexture.kt
+          test -f common/src/test/java/com/shilapi/xcertplay/LivePictureTest.kt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Prepare upstream preview runtime assets outside the source tree
+        run: |
+          curl --fail --location --retry 3 https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.12/DiPlay-0.2.12.apk --output "$RUNNER_TEMP/upstream.apk"
+          echo "840f2d62fc2c7d10250555b99444da7e0539be3834f635c6aa22ecbd635f7cf4  $RUNNER_TEMP/upstream.apk" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/runtime-assets/offline-mfi"
+          for name in identity.pk8 certificate.p7b; do
+            unzip -p "$RUNNER_TEMP/upstream.apk" "assets/offline-mfi/$name" > "$RUNNER_TEMP/runtime-assets/offline-mfi/$name"
+            chmod 600 "$RUNNER_TEMP/runtime-assets/offline-mfi/$name"
+          done
+          echo "DIPLAY_AUTH_ASSETS_DIR=$RUNNER_TEMP/runtime-assets" >> "$GITHUB_ENV"
+      - name: Unit tests, lint and standalone APK
+        run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :mobile:lintDebug :mobile:assembleStandaloneDebug --stacktrace
+      - name: Verify and package
+        run: |
+          mkdir -p delivery
+          cp mobile/build/outputs/apk/debug/mobile-debug.apk delivery/DiPlay-0.2.12-dilink4-cluster-test.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose delivery/DiPlay-0.2.12-dilink4-cluster-test.apk
+          test_version="$(sed -n 's/^clusterTestVersion=//p' gradle.properties)"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging delivery/DiPlay-0.2.12-dilink4-cluster-test.apk | grep -F "versionName='0.2.12-dilink4-cluster-test$test_version'"
+          for name in identity.pk8 certificate.p7b; do
+            unzip -p delivery/DiPlay-0.2.12-dilink4-cluster-test.apk "assets/offline-mfi/$name" | cmp - "$DIPLAY_AUTH_ASSETS_DIR/offline-mfi/$name"
+          done
+          cd delivery
+          sha256sum DiPlay-0.2.12-dilink4-cluster-test.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DiPlay-0.2.12-dilink4-cluster-test
+          path: delivery/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cluster-test-reports
+          path: |
+            shared/build/reports/tests/
+            common/build/reports/tests/
+            mobile/build/reports/lint-results-debug.html
+      - name: Publish experimental APK on the fork
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test_version="$(sed -n 's/^clusterTestVersion=//p' gradle.properties)"
+          tag="v0.2.12-test.$test_version"
+          gh release create "$tag" delivery/* --target "$GITHUB_SHA" --prerelease --title "DiPlay 0.2.12 — DiLink 4 cluster test $test_version" --notes-file docs/CLUSTER-TEST-23.md

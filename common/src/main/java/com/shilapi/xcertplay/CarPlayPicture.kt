@@ -16,6 +16,18 @@ internal object CarPlayPicture {
     val keys = listOf(BRIGHTNESS, CONTRAST, SATURATION, WARMTH)
     private val previewListeners = mutableSetOf<() -> Unit>()
     private var originalPreview = false
+    var night: Boolean = false
+        private set
+
+    fun setNight(value: Boolean) {
+        if (night == value) return
+        night = value
+        previewListeners.toList().forEach { it() }
+    }
+
+    fun addListener(listener: () -> Unit) { previewListeners.add(listener) }
+    fun removeListener(listener: () -> Unit) { previewListeners.remove(listener) }
+    fun preferenceKey(key: String, night: Boolean): String = if (night) "night_$key" else key
 
     /** Transient A/B comparison; never written to preferences or left on after panel closure. */
     fun showOriginal(show: Boolean) {
@@ -44,10 +56,10 @@ internal object CarPlayPicture {
     fun preferences(context: Context): SharedPreferences =
         context.getSharedPreferences("carplay_picture", Context.MODE_PRIVATE)
 
-    fun reset(prefs: SharedPreferences) {
+    fun reset(prefs: SharedPreferences, night: Boolean = false) {
         // clear() does not notify listeners on Android 10. Explicit values update live views.
         val editor = prefs.edit()
-        keys.forEach { editor.putInt(it, defaultValue(it)) }
+        keys.forEach { editor.putInt(preferenceKey(it, night), defaultValue(it)) }
         editor.apply()
     }
 
@@ -57,16 +69,16 @@ internal object CarPlayPicture {
         WARMTH -> -100..100
         else -> 0..200
     }
-    fun value(prefs: SharedPreferences, key: String): Int =
-        prefs.getInt(key, defaultValue(key)).coerceIn(range(key))
+    fun value(prefs: SharedPreferences, key: String, night: Boolean = false): Int =
+        prefs.getInt(preferenceKey(key, night), defaultValue(key)).coerceIn(range(key))
 
-    fun matrix(prefs: SharedPreferences): ColorMatrix {
-        val contrast = value(prefs, CONTRAST) / 100f
-        val brightness = value(prefs, BRIGHTNESS) * 255f / 100f
+    fun matrix(prefs: SharedPreferences, night: Boolean = false): ColorMatrix {
+        val contrast = value(prefs, CONTRAST, night) / 100f
+        val brightness = value(prefs, BRIGHTNESS, night) * 255f / 100f
         val offset = 127.5f * (1f - contrast) + brightness
-        val warmth = value(prefs, WARMTH) / 100f * 0.2f
+        val warmth = value(prefs, WARMTH, night) / 100f * 0.2f
         return ColorMatrix().apply {
-            setSaturation(value(prefs, SATURATION) / 100f)
+            setSaturation(value(prefs, SATURATION, night) / 100f)
             postConcat(ColorMatrix(floatArrayOf(
                 contrast, 0f, 0f, 0f, offset,
                 0f, contrast, 0f, 0f, offset,
@@ -79,9 +91,9 @@ internal object CarPlayPicture {
 
     fun apply(view: TextureView, prefs: SharedPreferences) {
         val neutral = originalPreview || keys
-            .all { value(prefs, it) == defaultValue(it) }
+            .all { value(prefs, it, night) == defaultValue(it) }
         view.setLayerPaint(if (neutral) null else Paint().apply {
-            colorFilter = ColorMatrixColorFilter(matrix(prefs))
+            colorFilter = ColorMatrixColorFilter(matrix(prefs, night))
         })
     }
 }
