@@ -689,4 +689,6 @@
     <string name="setup_badge_adb">يتطلب ADB عبر الشبكة</string>
     <string name="setup_done_title">أنت جاهز</string>
     <string name="setup_done_description">اتصل بـ iPhone الآن. يمكنك فتح هذا الدليل مرة أخرى من الإعدادات.</string>
+    <string name="settings_cluster_direct_video">فيديو مباشر للعدادات (تجريبي)</string>
+    <string name="settings_cluster_direct_video_description">يستخدم طبقة فيديو مستقلة في لوحة عدادات DiLink 4 لاختبار اختلاف الألوان. لا تطبق تعديلات الصورة على العدادات في هذا الوضع. تتحكم ميزة الفيديو السلس بالشاشة الرئيسية بشكل منفصل. معطل افتراضيًا. يعيد توصيل CarPlay.</string>
 </resources>

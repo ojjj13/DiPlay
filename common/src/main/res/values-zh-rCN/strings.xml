@@ -749,4 +749,6 @@
     <string name="setup_badge_adb">需要网络 ADB</string>
     <string name="setup_done_title">准备就绪</string>
     <string name="setup_done_description">现在连接你的 iPhone。之后可在设置中再次打开本向导。</string>
+    <string name="settings_cluster_direct_video">仪表视频直出（实验性）</string>
+    <string name="settings_cluster_direct_video_description">在 DiLink 4 仪表上使用独立视频层，排查画面偏色。开启后，颜色调整不作用于仪表。中控仍由“流畅视频”单独控制。默认关闭。更改后会重新连接 CarPlay。</string>
 </resources>

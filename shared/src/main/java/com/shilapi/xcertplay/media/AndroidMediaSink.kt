@@ -738,10 +738,10 @@ private class VideoDecoder(
     private fun colorDiagnostic(event: String, snapshot: () -> String) {
         // Diagnostics must never make a working codec fail or trigger a fallback.
         runCatching {
-            val line = "Test25 $diagnosticLabel $event ${snapshot()}"
+            val line = "Test26 $diagnosticLabel $event ${snapshot()}"
             Log.i(TAG, line)
             runCatching { report(line) }
-        }.onFailure { Log.w(TAG, "Test25 $diagnosticLabel $event snapshot unavailable: ${it.javaClass.simpleName}") }
+        }.onFailure { Log.w(TAG, "Test26 $diagnosticLabel $event snapshot unavailable: ${it.javaClass.simpleName}") }
     }
 
     private val pacer = FramePacer()

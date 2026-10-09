@@ -689,4 +689,6 @@
     <string name="setup_badge_adb">Requiere ADB por red</string>
     <string name="setup_done_title">Todo listo</string>
     <string name="setup_done_description">Conecta tu iPhone ahora. Puedes volver a abrir esta guía desde Ajustes.</string>
+    <string name="settings_cluster_direct_video">Vídeo directo al cuadro (experimental)</string>
+    <string name="settings_cluster_direct_video_description">Usa una capa de vídeo independiente en el cuadro DiLink 4 para investigar colores incorrectos. Los ajustes de imagen no se aplican al cuadro en este modo. Vídeo fluido controla la pantalla principal por separado. Desactivado de forma predeterminada. Reconecta CarPlay.</string>
 </resources>

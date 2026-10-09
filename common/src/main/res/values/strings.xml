@@ -786,4 +786,6 @@
     <string name="setup_badge_adb">Needs ADB over network</string>
     <string name="setup_done_title">You’re ready</string>
     <string name="setup_done_description">Connect your iPhone now. You can open this guide again from Settings.</string>
+    <string name="settings_cluster_direct_video">Direct cluster video (experimental)</string>
+    <string name="settings_cluster_direct_video_description">Uses a separate video layer on the DiLink 4 instrument cluster to test a color mismatch. Picture adjustments do not apply to the cluster in this mode. The main screen is controlled separately by Smooth video. Off by default. Reconnects CarPlay.</string>
 </resources>

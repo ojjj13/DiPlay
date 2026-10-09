@@ -20,7 +20,9 @@ import java.lang.ref.WeakReference
 class AdbClusterActivity : Activity() {
     private var waiting: TextView? = null
     private var surface: Surface? = null
-    private var videoTexture: ClusterVideoTexture? = null
+    private var videoOutput: java.io.Closeable? = null
+    internal var usesSurfaceView = false
+        private set
     private var turnCard: ClusterTurnCardView? = null
     private var safeAreaPreview: SafeAreaEditorView? = null
     internal var routeStatus = ""
@@ -39,12 +41,18 @@ class AdbClusterActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
-        val video = ClusterVideoTexture(this) { next ->
+        val publishSurface: (Surface?) -> Unit = { next ->
             surface?.let { ClusterActivityOutput.detach(this, it) }
             surface = next
             if (next != null && ClusterActivityOutput.activity.get() === this)
                 ClusterActivityOutput.attach(this, next)
-        }.also { videoTexture = it }
+        }
+        usesSurfaceView = AirPlayPersistence.loadAdbClusterSurfaceView(this)
+        val video: View = if (usesSurfaceView) {
+            ClusterVideoSurface(this, publishSurface).also { videoOutput = it }
+        } else {
+            ClusterVideoTexture(this, publishSurface).also { videoOutput = it }
+        }
         root.addView(video, FrameLayout.LayoutParams(-1, -1))
         waiting = TextView(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -109,10 +117,10 @@ class AdbClusterActivity : Activity() {
 
     internal fun route() { ClusterActivityOutput.retry() }
 
-    // Losing focus must not detach stream 111. The texture owns the rendering lifetime.
+    // Losing focus must not detach stream 111. The video view owns the rendering lifetime.
     override fun onDestroy() {
-        videoTexture?.close()
-        videoTexture = null
+        videoOutput?.close()
+        videoOutput = null
         if (ClusterActivityOutput.activity.get() === this) {
             intent.getStringExtra("cluster_launch_token")?.let {
                 com.shilapi.xcertplay.hud.BydOemClusterNavi.release(this, it)
@@ -158,6 +166,8 @@ internal object ClusterActivityOutput {
     var surface: Surface? = null
         private set
     private var surfaceOwner: Any? = null
+    val isSurfaceViewOutput: Boolean
+        get() = surface != null && (surfaceOwner as? AdbClusterActivity)?.usesSurfaceView == true
     private var hostOwner: Any? = null
     private var onSurface: ((Surface?) -> Unit)? = null
     var streamActive = false
@@ -216,6 +226,9 @@ internal object ClusterActivityOutput {
     }
 
     fun bind(owner: Any, taskId: Int, callback: (Surface?) -> Unit) {
+        // Finish the previous host's codec use before handing a framework-owned Surface to a new host.
+        // Its callback also tracks retiring sinks that the new host does not own.
+        if (hostOwner !== owner && isSurfaceViewOutput) onSurface?.invoke(null)
         if (hostOwner !== owner && !hasConfirmedRoute() && previewHost.get() == null) {
             ++generation
             launchToken = null

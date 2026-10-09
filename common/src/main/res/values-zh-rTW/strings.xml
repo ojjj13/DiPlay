@@ -749,4 +749,6 @@
     <string name="setup_badge_adb">需要網路 ADB</string>
     <string name="setup_done_title">準備就緒</string>
     <string name="setup_done_description">現在連線你的 iPhone。之後可在設定中再次開啟本精靈。</string>
+    <string name="settings_cluster_direct_video">儀表影片直接輸出（實驗性）</string>
+    <string name="settings_cluster_direct_video_description">在 DiLink 4 儀表上使用獨立影片圖層，排查畫面偏色。開啟後，畫面調整不套用至儀表。中控仍由「流暢影片」單獨控制。預設關閉。變更後會重新連線至 CarPlay。</string>
 </resources>

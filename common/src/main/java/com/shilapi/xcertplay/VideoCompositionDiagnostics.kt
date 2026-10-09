@@ -14,7 +14,7 @@ internal object VideoCompositionDiagnostics {
             val hdr = if (Build.VERSION.SDK_INT >= 24) display?.hdrCapabilities?.supportedHdrTypes?.joinToString(",") else null
             val wide = if (Build.VERSION.SDK_INT >= 26) display?.isWideColorGamut else null
             val texture = view as? android.view.TextureView
-            "Test25 composition event=$event view=${view?.javaClass?.simpleName} " +
+            "Test26 composition event=$event view=${view?.javaClass?.simpleName} " +
                 "viewId=${view?.let { System.identityHashCode(it).toString(16) }} " +
                 "size=${view?.width}x${view?.height} hwAccelerated=${view?.isHardwareAccelerated} " +
                 "layerType=${view?.layerType} alpha=${view?.alpha} textureOpaque=${texture?.isOpaque} " +
@@ -22,7 +22,7 @@ internal object VideoCompositionDiagnostics {
                 "mode=${display?.mode} hdrTypes=$hdr wideGamut=$wide " +
                 "surface=${VideoColorDiagnostics.surface(surface)} $detail " +
                 "[framework capabilities only; actual SurfaceFlinger/HWC dataspace unavailable to app]"
-        }.getOrElse { "Test25 composition event=$event snapshot unavailable=${it.javaClass.simpleName}" }
+        }.getOrElse { "Test26 composition event=$event snapshot unavailable=${it.javaClass.simpleName}" }
         Log.i("xcertplay-usb", line)
         return line
     }

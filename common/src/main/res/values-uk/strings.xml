@@ -701,4 +701,6 @@
     <string name="setup_badge_adb">Потрібен ADB через мережу</string>
     <string name="setup_done_title">Усе готово</string>
     <string name="setup_done_description">Під’єднайте iPhone зараз. Цей майстер можна знову відкрити в налаштуваннях.</string>
+    <string name="settings_cluster_direct_video">Пряме відео на панелі приладів (експериментально)</string>
+    <string name="settings_cluster_direct_video_description">Використовує окремий відеошар на панелі DiLink 4 для перевірки спотворення кольорів. Налаштування картинки не застосовуються до панелі в цьому режимі. Основним екраном окремо керує «Плавне відео». Типово вимкнено. Перепідключає CarPlay.</string>
 </resources>

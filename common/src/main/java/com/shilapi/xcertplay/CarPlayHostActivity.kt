@@ -328,6 +328,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var currentSurfaceTexture: SurfaceTexture? = null
     private var clusterPresentation: ClusterMapPresentation? = null
     private var clusterSurface: Surface? = null
+    private var clusterSurfaceUsesHolder = false
     private var clusterMonitor: DiLink51ClusterMonitor? = null
     private var detectedCluster = ClusterActivityState.Snapshot(null, false)
     // Keep one surface per layer alive, including while its map card is hidden.
@@ -1072,19 +1073,36 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun onClusterSurface(surface: Surface?) {
         if (clusterSurface === surface) return
+        if (clusterSurfaceUsesHolder) clusterSurface?.let { old ->
+            // SurfaceHolder may destroy its buffer queue as soon as the callback returns. Include
+            // sessions still tearing down, and queue every detach before waiting for any of them.
+            val detaches = (listOfNotNull(sink) + retiringSinks).distinct()
+                .map { it.beginSurfaceDetach(old, parkMain = false) }
+            val confirmed = detaches.map { it.await() }.all { it }
+            appendLog("Test26 cluster SurfaceView detached confirmed=$confirmed")
+        }
         // A direct handoff lets MediaCodec.setOutputSurface preserve its reference frames.
         // Clearing first would destroy the decoder and can leave stream 111 waiting for an IDR.
         if ((!DiLink51ClusterLayout.supported() && !AdbClusterRouter.enabled(this)) || surface == null) {
             clusterSurface?.let { old -> sink?.clearSurface(SCREEN_TYPE_ALT, old) }
         }
         clusterSurface = surface
+        clusterSurfaceUsesHolder = surface != null && ClusterActivityOutput.surface === surface &&
+            ClusterActivityOutput.isSurfaceViewOutput
         // Never fall back to the main surface: two decoders must not draw into one Surface.
         if (surface != null) {
+            if (AdbClusterRouter.enabled(this)) appendLog("Test26 cluster renderer=" +
+                (if (clusterSurfaceUsesHolder) "SURFACE" else "TEXTURE") +
+                " stream=111 buffer=1920x720 pictureAdjustments=${!clusterSurfaceUsesHolder}")
             if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute() &&
                 !adbClusterConfigured && controller != null) {
                 ClusterActivityOutput.setStreamActive(false)
                 reconnectAfterLoss("DiLink 4 cluster confirmed; requesting its native stream")
-            } else sink?.setSurface(SCREEN_TYPE_ALT, surface)
+            } else {
+                sink?.setSurface(SCREEN_TYPE_ALT, surface)
+                // A static map may not send another frame after its Surface was recreated.
+                if (clusterSurfaceUsesHolder) sink?.refreshPicture(SCREEN_TYPE_ALT)
+            }
         }
         updateClusterMapShown()
     }
