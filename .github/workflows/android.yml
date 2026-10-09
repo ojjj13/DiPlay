@@ -1,7 +1,7 @@
 name: Android checks
 on:
   push:
-    branches: [main]
+    branches: [main, diagnostic/test25-v0.2.15]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -24,6 +24,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Unit tests, lint and source-only debug build
         run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :home:testDebugUnitTest :mobile:lintDebug :home:lintDebug :maphost:lintDebug :mobile:assembleDebug :home:assembleDebug :maphost:assembleDebug --stacktrace
+      - name: Verify and collect Test25 APK without authentication
+        if: github.ref == 'refs/heads/diagnostic/test25-v0.2.15'
+        run: |
+          python3 - <<'PYCODE'
+          import pathlib, zipfile, shutil
+          source = pathlib.Path("mobile/build/outputs/apk/debug/mobile-debug.apk")
+          blocked = {".pk8", ".p7b", ".key", ".pem", ".p12", ".pfx", ".jks", ".keystore"}
+          with zipfile.ZipFile(source) as apk:
+              unexpected = [n for n in apk.namelist() if "offline-mfi" in n.lower() or pathlib.PurePosixPath(n).suffix.lower() in blocked]
+              assert not unexpected, "Authentication/credential files found in APK"
+          pathlib.Path("delivery").mkdir(exist_ok=True)
+          shutil.copyfile(source, "delivery/DiPlay-Test25-source-only.apk")
+          PYCODE
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify delivery/DiPlay-Test25-source-only.apk
+          sha256sum delivery/DiPlay-Test25-source-only.apk > delivery/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/diagnostic/test25-v0.2.15'
+        with:
+          name: DiPlay-Test25-source-only
+          path: delivery/
+          retention-days: 14
       - name: Test reports
         if: always()
         uses: actions/upload-artifact@v4

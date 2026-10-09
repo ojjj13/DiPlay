@@ -505,6 +505,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 }
             }
             appendLog(if (existing === surface) "Texture surface reused" else "Texture surface created")
+            appendLog(VideoCompositionDiagnostics.log("main-texture-available", videoView, surface, "buffer=${width}x$height windowColorMode=${if (android.os.Build.VERSION.SDK_INT >= 26) window.colorMode else -1}"))
             attachSurface(surface)
             updateVideoLayout(width, height)
             scheduleDisplaySize(width, height)
@@ -532,6 +533,7 @@ class CarPlayHostActivity : ComponentActivity() {
             val surface = holder.surface
             videoSurfaceOwner.replace(surface, releaseOnDetach = false)
             appendLog("SurfaceView video surface created valid=${surface.isValid}")
+            appendLog(VideoCompositionDiagnostics.log("main-surface-created", fallbackVideoView, surface))
             attachSurface(surface)
             // A still CarPlay screen sends no frames, so ask for one instead of showing the parked gap.
             if (smoothVideo) sink?.refreshPicture(SCREEN_TYPE_MAIN)
@@ -540,6 +542,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
             if (holder !== fallbackVideoView?.holder) return
+            appendLog(VideoCompositionDiagnostics.log("main-surface-changed", fallbackVideoView, holder.surface, "pixelFormat=$format buffer=${width}x$height"))
             // Holder dimensions describe the fitted video, not the host window/CarPlay canvas.
             videoView?.let { updateVideoLayout(it.width, it.height) }
         }

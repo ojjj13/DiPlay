@@ -82,6 +82,7 @@ internal class ClusterMapPresentation(
                     texture.setDefaultBufferSize(DiLink51ClusterLayout.STREAM_WIDTH, DiLink51ClusterLayout.STREAM_HEIGHT)
                     transform()
                     outputSurface = Surface(texture).also(onSurface)
+                    VideoCompositionDiagnostics.log("cluster-presentation-texture", textureView, outputSurface, "callback=${width}x$height")
                 }
                 override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) = transform()
                 override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
@@ -108,6 +109,7 @@ internal class ClusterMapPresentation(
 
                 override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
                     Log.i(TAG, "cluster surface ${width}x$height")
+                    VideoCompositionDiagnostics.log("cluster-presentation-surface", surfaceView, holder.surface, "pixelFormat=$format buffer=${width}x$height")
                 }
 
                 override fun surfaceDestroyed(holder: SurfaceHolder) {

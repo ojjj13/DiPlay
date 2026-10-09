@@ -17,6 +17,7 @@ internal class ClusterVideoTexture(context: Context, private val onSurface: (Sur
                 releaseOutput()
                 texture.setDefaultBufferSize(1920, 720)
                 output = Surface(texture).also(onSurface)
+                VideoCompositionDiagnostics.log("cluster-texture-available", this@ClusterVideoTexture, output, "buffer=1920x720 callback=${width}x$height")
             }
             override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) = Unit
             override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit

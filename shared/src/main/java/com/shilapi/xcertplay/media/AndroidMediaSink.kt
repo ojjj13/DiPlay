@@ -734,6 +734,16 @@ private class VideoDecoder(
     private val onExit: (VideoDecoder) -> Unit = {},
     operatingRate: Int = 0,
 ) : Closeable {
+    private val diagnosticLabel = "stream=$streamType output=${statsLabel ?: "primary"} worker=${System.identityHashCode(this).toString(16)}"
+    private fun colorDiagnostic(event: String, snapshot: () -> String) {
+        // Diagnostics must never make a working codec fail or trigger a fallback.
+        runCatching {
+            val line = "Test25 $diagnosticLabel $event ${snapshot()}"
+            Log.i(TAG, line)
+            runCatching { report(line) }
+        }.onFailure { Log.w(TAG, "Test25 $diagnosticLabel $event snapshot unavailable: ${it.javaClass.simpleName}") }
+    }
+
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
     // Per queued presentation time (decode thread only): when it was queued, and whether it is a paced
@@ -969,8 +979,15 @@ private class VideoDecoder(
                 codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")) {
                 format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
             }
+            colorDiagnostic("configure-input") {
+                "${VideoColorDiagnostics.codec(codec, mime)} preferSoftwareHevc=$preferSoftwareHevcDecoder " +
+                    "tuned=${attempt.tuned} surface=${VideoColorDiagnostics.surface(surface)} " +
+                    "${VideoColorDiagnostics.format(format)} csdLengths=${csd.map { it.size }}"
+            }
             codec.configure(format, surface, null, 0)
             codec.start()
+            colorDiagnostic("configured-input") { VideoColorDiagnostics.format(codec.inputFormat) }
+            colorDiagnostic("initial-output") { VideoColorDiagnostics.format(codec.outputFormat) }
             codec
         } catch (error: Exception) {
             runCatching { candidate?.release() }
@@ -1054,6 +1071,9 @@ private class VideoDecoder(
 
     private fun changeSurface(surface: Surface?) {
         if (outputSurface === surface) return
+        colorDiagnostic("surface-handoff") {
+            "old=${VideoColorDiagnostics.surface(outputSurface)} new=${VideoColorDiagnostics.surface(surface)}"
+        }
         outputSurface = surface
         if (surface == null) {
             releaseDecoder()
@@ -1184,6 +1204,11 @@ private class VideoDecoder(
                     if (shown) stats.onRendered()
                     if (shown && !renderedFrameLogged) {
                         renderedFrameLogged = true
+                        colorDiagnostic("first-output-release") {
+                            "surface=${VideoColorDiagnostics.surface(outputSurface)} bytes=${info.size} flags=${info.flags} " +
+                                "paced=$paced releaseMode=${if (targetNs - now in 1..MAX_PACING_AHEAD_NS) "timestamp" else "boolean"}; " +
+                                "release confirms codec submission, not SurfaceFlinger composition"
+                        }
                         report("first frame rendered")
                         Log.i(TAG, "video decoder rendered first frame bytes=${info.size}")
                     }
@@ -1195,6 +1220,7 @@ private class VideoDecoder(
     }
 
     private fun logOutputFormat(format: MediaFormat) {
+        colorDiagnostic("output-format-changed") { VideoColorDiagnostics.format(format) }
         report("output format requested=${width}x${height} " +
             "coded=${format.intOrNull(MediaFormat.KEY_WIDTH)}x${format.intOrNull(MediaFormat.KEY_HEIGHT)} " +
             "crop=${format.intOrNull("crop-left")},${format.intOrNull("crop-top")}," +
