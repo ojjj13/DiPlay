@@ -850,4 +850,8 @@
     <string name="cluster_small_window_card_opacity">Small-window turn card · opacity</string>
     <string name="turn_card_theme_day">Always day</string>
     <string name="turn_card_theme_night">Always night</string>
+    <string name="settings_cluster_direct_video">Direct cluster video (experimental)</string>
+    <string name="settings_cluster_direct_video_description">Uses a separate video layer on the DiLink 4 instrument cluster to test a color mismatch. Picture adjustments do not apply to the cluster in this mode. The main screen is controlled separately by Smooth video. Off by default. Reconnects CarPlay.</string>
+    <string name="settings_cluster_rgb_video">Cluster RGB output (experimental)</string>
+    <string name="settings_cluster_rgb_video_description">Converts cluster video to RGBA before virtual-screen composition to test pale colors. Takes priority over Direct cluster video; picture adjustments do not apply. Off by default. Reconnects CarPlay.</string>
 </resources>

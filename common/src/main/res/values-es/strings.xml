@@ -749,4 +749,8 @@
     <string name="settings_ambient_parked_notice">Configura con el vehículo estacionado. Compatibilidad experimental con algunas interfaces BYD; puede variar según modelo y firmware. El nivel 0 es el mínimo OEM, no apagado.</string>
     <string name="settings_ambient_checking">Comprobando…</string>
     <string name="settings_ambient_unavailable">La comprobación de solo lectura falló: falta autorización ADB existente o una interfaz compatible. No se guardaron ajustes. Configura el acceso por separado con el vehículo estacionado; esta función no activa ADB ni solicita autorización.</string>
+    <string name="settings_cluster_direct_video">Vídeo directo al cuadro (experimental)</string>
+    <string name="settings_cluster_direct_video_description">Usa una capa de vídeo independiente en el cuadro DiLink 4 para investigar colores incorrectos. Los ajustes de imagen no se aplican al cuadro en este modo. Vídeo fluido controla la pantalla principal por separado. Desactivado de forma predeterminada. Reconecta CarPlay.</string>
+    <string name="settings_cluster_rgb_video">Salida RGB del cuadro (experimental)</string>
+    <string name="settings_cluster_rgb_video_description">Convierte el vídeo del cuadro a RGBA antes de la composición de la pantalla virtual para probar los colores pálidos. Tiene prioridad sobre el vídeo directo; no aplica ajustes de imagen. Desactivado por defecto. Reconecta CarPlay.</string>
 </resources>

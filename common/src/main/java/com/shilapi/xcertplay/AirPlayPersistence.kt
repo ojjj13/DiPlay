@@ -77,6 +77,7 @@ object AirPlayPersistence {
     private const val KEY_FPS_COUNTER = "fps_counter"
     private const val KEY_CLUSTER_MAP = "cluster_map_enabled"
     private const val KEY_ADB_CLUSTER_ACTIVITY = "adb_cluster_activity_enabled"
+    private const val KEY_ADB_CLUSTER_SURFACE_VIEW = "adb_cluster_surface_view"
     private const val KEY_CENTER_MAP_OVERLAY = "center_map_overlay"
     private const val KEY_CENTER_MAP_AUTO_HIDE = "center_map_auto_hide"
     private const val KEY_LAUNCHER_MAP_SHARING = "launcher_map_sharing"
@@ -704,6 +705,22 @@ object AirPlayPersistence {
             .putBoolean("platform21_cluster_enabled", enabled)
         if (enabled) edit.putBoolean(KEY_CLUSTER_MAP, true).putBoolean(KEY_ADB_CLUSTER_ACTIVITY, false)
         edit.apply()
+    }
+
+    fun loadAdbClusterRgb(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("adb_cluster_rgb_test27", false)
+
+    fun saveAdbClusterRgb(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean("adb_cluster_rgb_test27", enabled).apply()
+    }
+
+    fun loadAdbClusterSurfaceView(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ADB_CLUSTER_SURFACE_VIEW, false)
+
+    fun saveAdbClusterSurfaceView(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_ADB_CLUSTER_SURFACE_VIEW, enabled).apply()
     }
 
     fun saveClusterMapEnabled(context: Context, enabled: Boolean) {

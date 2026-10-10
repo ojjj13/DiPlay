@@ -809,4 +809,8 @@
     <string name="cluster_small_window_card_opacity">小屏转向卡 · 透明度</string>
     <string name="turn_card_theme_day">始终白天</string>
     <string name="turn_card_theme_night">始终夜间</string>
+    <string name="settings_cluster_direct_video">仪表视频直出（实验性）</string>
+    <string name="settings_cluster_direct_video_description">在 DiLink 4 仪表上使用独立视频层，排查画面偏色。开启后，颜色调整不作用于仪表。中控仍由“流畅视频”单独控制。默认关闭。更改后会重新连接 CarPlay。</string>
+    <string name="settings_cluster_rgb_video">仪表 RGB 输出（实验性）</string>
+    <string name="settings_cluster_rgb_video_description">先将仪表视频绘制为 RGBA，再交给虚拟屏合成，用于测试颜色发白。优先于仪表直接视频输出；不应用画面调整。默认关闭。修改后会重新连接 CarPlay。</string>
 </resources>

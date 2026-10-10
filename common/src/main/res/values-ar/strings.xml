@@ -749,4 +749,8 @@
     <string name="settings_ambient_parked_notice">اضبط أثناء الوقوف. دعم تجريبي لبعض واجهات BYD؛ التوافق يختلف حسب الطراز والبرنامج الثابت. المستوى 0 يعني أدنى مستوى للمصنع وليس إطفاء الإضاءة.</string>
     <string name="settings_ambient_checking">جارٍ التحقق…</string>
     <string name="settings_ambient_unavailable">فشل التحقق للقراءة فقط: تفويض ADB الموجود أو واجهة الإضاءة المدعومة غير متاحة. لم تُحفظ الإعدادات. اضبط الوصول بشكل منفصل أثناء الوقوف؛ هذه الميزة لا تفعّل ADB ولا تطلب التفويض.</string>
+    <string name="settings_cluster_direct_video">فيديو مباشر للعدادات (تجريبي)</string>
+    <string name="settings_cluster_direct_video_description">يستخدم طبقة فيديو مستقلة في لوحة عدادات DiLink 4 لاختبار اختلاف الألوان. لا تطبق تعديلات الصورة على العدادات في هذا الوضع. تتحكم ميزة الفيديو السلس بالشاشة الرئيسية بشكل منفصل. معطل افتراضيًا. يعيد توصيل CarPlay.</string>
+    <string name="settings_cluster_rgb_video">إخراج RGB للعدادات (تجريبي)</string>
+    <string name="settings_cluster_rgb_video_description">يحوّل فيديو العدادات إلى RGBA قبل تركيب الشاشة الافتراضية لاختبار الألوان الباهتة. له الأولوية على الفيديو المباشر؛ لا تُطبّق تعديلات الصورة. معطّل افتراضياً. يعيد توصيل CarPlay.</string>
 </resources>

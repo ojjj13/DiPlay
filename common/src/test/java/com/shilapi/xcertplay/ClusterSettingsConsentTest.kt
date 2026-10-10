@@ -141,6 +141,31 @@ class ClusterSettingsConsentTest {
             shadowOf(screen).nextStartedActivity?.component?.className)
     }
 
+    @Test fun cancellingDirectVideoKeepsTheRendererAndActiveSession() {
+        AirPlayPersistence.saveAdbClusterEnabled(screen, true)
+        render()
+        assertFalse(AirPlayPersistence.loadAdbClusterSurfaceView(screen))
+        setting(R.string.settings_cluster_direct_video).performClick()
+        assertCurrentSessionUnchanged()
+        assertFalse(AirPlayPersistence.loadAdbClusterSurfaceView(screen))
+        dialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(AirPlayPersistence.loadAdbClusterSurfaceView(screen))
+        assertCurrentSessionUnchanged()
+    }
+
+    @Test fun applyingDirectVideoReleasesTheOldRouteAndReconnectsAfterConsent() {
+        AirPlayPersistence.saveAdbClusterEnabled(screen, true)
+        render()
+        setting(R.string.settings_cluster_direct_video).performClick()
+        assertCurrentSessionUnchanged()
+        dialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(AirPlayPersistence.loadAdbClusterSurfaceView(screen))
+        assertEquals(listOf("release-cluster-surface", "stop-session"), events)
+        assertNull(CarPlayBackgroundSession.snapshot())
+    }
+
     private fun assertCurrentSessionUnchanged() {
         assertTrue(events.isEmpty())
         assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)

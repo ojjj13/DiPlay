@@ -1817,6 +1817,20 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             }
             val adbCluster = AdbClusterRouter.enabled(this)
             if (adbCluster) {
+                reconnectingToggle(card, getString(R.string.settings_cluster_rgb_video),
+                    getString(R.string.settings_cluster_rgb_video_description),
+                    AirPlayPersistence.loadAdbClusterRgb(this)) {
+                    AirPlayPersistence.saveAdbClusterRgb(this, it)
+                    ClusterActivityOutput.stopForSettings()
+                    render()
+                }
+                reconnectingToggle(card, getString(R.string.settings_cluster_direct_video),
+                    getString(R.string.settings_cluster_direct_video_description),
+                    AirPlayPersistence.loadAdbClusterSurfaceView(this)) {
+                    AirPlayPersistence.saveAdbClusterSurfaceView(this, it)
+                    ClusterActivityOutput.stopForSettings()
+                    render()
+                }
                 card.addView(button(getString(R.string.adb_cluster_authorize), false) { authorizeClusterRouting() }, matchButton(10, 56))
                 card.addView(button(getString(R.string.adb_cluster_open), false) { ClusterActivityOutput.retry(force = true) }, matchButton(10, 56))
             }
@@ -4829,6 +4843,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     appendLine()
                     appendLine("--- ADB cluster activity routing ---")
                     appendLine("adbClusterActivityEnabled=${AirPlayPersistence.loadAdbClusterEnabled(appContext)}")
+                    appendLine("adbClusterSurfaceViewSaved=${AirPlayPersistence.loadAdbClusterSurfaceView(appContext)} " +
+                        "active=${ClusterActivityOutput.activity.get()?.usesSurfaceView}")
                     appendLine("clusterActivityMainTask=${ClusterActivityOutput.mainTaskId} surfaceValid=${ClusterActivityOutput.surface?.isValid}")
                     AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
                         DiagnosticRedactor.redact(line)?.let { appendLine(it) }

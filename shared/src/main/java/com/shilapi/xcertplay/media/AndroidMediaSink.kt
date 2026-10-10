@@ -831,6 +831,16 @@ private class VideoDecoder(
      */
     private val framesAtOnce: Boolean = false,
 ) : Closeable {
+    private val diagnosticLabel = "stream=$streamType output=${statsLabel ?: "primary"} worker=${System.identityHashCode(this).toString(16)}"
+    private fun colorDiagnostic(event: String, snapshot: () -> String) {
+        // Diagnostics must never make a working codec fail or trigger a fallback.
+        runCatching {
+            val line = "Test26 $diagnosticLabel $event ${snapshot()}"
+            Log.i(TAG, line)
+            runCatching { report(line) }
+        }.onFailure { Log.w(TAG, "Test26 $diagnosticLabel $event snapshot unavailable: ${it.javaClass.simpleName}") }
+    }
+
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
     // Per queued presentation time (decode thread only): when it was queued, and whether it is a paced
@@ -1183,12 +1193,19 @@ private class VideoDecoder(
             configuredVendorLowLatency = vendorKeys.isNotEmpty()
             val pictureOrder = attempt.tuned && atOnce && listsPictureOrder(codec)
             if (pictureOrder) format.setInteger(PICTURE_ORDER_PARAMETER, 1)
+            colorDiagnostic("configure-input") {
+                "${VideoColorDiagnostics.codec(codec, mime)} preferSoftwareHevc=$preferSoftwareHevcDecoder " +
+                    "tuned=${attempt.tuned} surface=${VideoColorDiagnostics.surface(surface)} " +
+                    "${VideoColorDiagnostics.format(format)} csdLengths=${csd.map { it.size }}"
+            }
             codec.configure(format, surface, null, 0)
             phase = "start"
             phaseStartNs = System.nanoTime()
             codec.start()
             startedLowLatency = lowLatency
             startedPictureOrder = pictureOrder
+            colorDiagnostic("configured-input") { VideoColorDiagnostics.format(codec.inputFormat) }
+            colorDiagnostic("initial-output") { VideoColorDiagnostics.format(codec.outputFormat) }
             codec
         } catch (error: Exception) {
             val phaseMs = (System.nanoTime() - phaseStartNs) / 1_000_000
@@ -1298,6 +1315,9 @@ private class VideoDecoder(
 
     private fun changeSurface(surface: Surface?): Unit = synchronized(outputLock) {
         if (outputSurface === surface) return
+        colorDiagnostic("surface-handoff") {
+            "old=${VideoColorDiagnostics.surface(outputSurface)} new=${VideoColorDiagnostics.surface(surface)}"
+        }
         outputSurface = surface
         if (surface == null) {
             releaseDecoder()
@@ -1456,6 +1476,9 @@ private class VideoDecoder(
                 }
                 if (shown && !renderedFrameLogged) {
                     renderedFrameLogged = true
+                    colorDiagnostic("first-output-release") {
+                        "surface=${VideoColorDiagnostics.surface(outputSurface)} bytes=${info.size} flags=${info.flags}; codec submission only"
+                    }
                     report("first frame rendered")
                     Log.i(TAG, "video decoder rendered first frame bytes=${info.size}")
                 }
@@ -1467,6 +1490,7 @@ private class VideoDecoder(
     }
 
     private fun logOutputFormat(format: MediaFormat) {
+        colorDiagnostic("output-format-changed") { VideoColorDiagnostics.format(format) }
         report("output format requested=${width}x${height} " +
             "coded=${format.intOrNull(MediaFormat.KEY_WIDTH)}x${format.intOrNull(MediaFormat.KEY_HEIGHT)} " +
             "crop=${format.intOrNull("crop-left")},${format.intOrNull("crop-top")}," +

@@ -26,7 +26,17 @@ internal object CarPlayPicture {
     class Binding(private val view: TextureView) : java.io.Closeable {
         private var closed = false
         private val prefs = preferences(view.context)
-        private val update: () -> Unit = { if (!closed) apply(view, prefs) }
+        private var lastDiagnostic: String? = null
+        private val update: () -> Unit = {
+            if (!closed) {
+                apply(view, prefs)
+                val snapshot = "originalPreview=$originalPreview " + keys.joinToString(" ") { "$it=${value(prefs, it)}" }
+                if (snapshot != lastDiagnostic) {
+                    lastDiagnostic = snapshot
+                    VideoCompositionDiagnostics.log("picture-filter", view, detail = snapshot + " matrix=${matrix(prefs).array.joinToString(",")}")
+                }
+            }
+        }
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
         private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> handler.post { update() } }
         init {

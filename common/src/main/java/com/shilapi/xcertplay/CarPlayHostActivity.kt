@@ -340,6 +340,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var currentSurfaceTexture: SurfaceTexture? = null
     private var clusterPresentation: ClusterMapPresentation? = null
     private var clusterSurface: Surface? = null
+    private var clusterSurfaceUsesHolder = false
     private var clusterMonitor: DiLink51ClusterMonitor? = null
     private var detectedCluster = ClusterActivityState.Snapshot(null, false)
     // Keep one surface per layer alive, including while its map card is hidden.
@@ -575,6 +576,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 }
             }
             appendLog(if (existing === surface) "Texture surface reused" else "Texture surface created")
+            appendLog(VideoCompositionDiagnostics.log("main-texture-available", videoView, surface, "buffer=${width}x$height windowColorMode=${if (android.os.Build.VERSION.SDK_INT >= 26) window.colorMode else -1}"))
             attachSurface(surface)
             updateVideoLayout(width, height)
             scheduleDisplaySize(width, height)
@@ -602,6 +604,7 @@ class CarPlayHostActivity : ComponentActivity() {
             val surface = holder.surface
             videoSurfaceOwner.replace(surface, releaseOnDetach = false)
             appendLog("SurfaceView video surface created valid=${surface.isValid}")
+            appendLog(VideoCompositionDiagnostics.log("main-surface-created", fallbackVideoView, surface))
             attachSurface(surface)
             // A still CarPlay screen sends no frames, so ask for one instead of showing the parked gap.
             if (smoothVideo) sink?.refreshPicture(SCREEN_TYPE_MAIN)
@@ -610,6 +613,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
             if (holder !== fallbackVideoView?.holder) return
+            appendLog(VideoCompositionDiagnostics.log("main-surface-changed", fallbackVideoView, holder.surface, "pixelFormat=$format buffer=${width}x$height"))
             // Holder dimensions describe the fitted video, not the host window/CarPlay canvas.
             videoView?.let { updateVideoLayout(it.width, it.height) }
         }
@@ -1176,19 +1180,36 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun onClusterSurface(surface: Surface?) {
         if (clusterSurface === surface) return
+        if (clusterSurfaceUsesHolder) clusterSurface?.let { old ->
+            // SurfaceHolder may destroy its buffer queue as soon as the callback returns. Include
+            // sessions still tearing down, and queue every detach before waiting for any of them.
+            val detaches = (listOfNotNull(sink) + retiringSinks).distinct()
+                .map { it.beginSurfaceDetach(old, parkMain = false) }
+            val confirmed = detaches.map { it.await() }.all { it }
+            appendLog("Test27 cluster SurfaceView detached confirmed=$confirmed")
+        }
         // A direct handoff lets MediaCodec.setOutputSurface preserve its reference frames.
         // Clearing first would destroy the decoder and can leave stream 111 waiting for an IDR.
         if ((!DiLink51ClusterLayout.supported() && !AdbClusterRouter.enabled(this)) || surface == null) {
             clusterSurface?.let { old -> sink?.clearSurface(SCREEN_TYPE_ALT, old) }
         }
         clusterSurface = surface
+        clusterSurfaceUsesHolder = surface != null && ClusterActivityOutput.surface === surface &&
+            ClusterActivityOutput.isSurfaceViewOutput
         // Never fall back to the main surface: two decoders must not draw into one Surface.
         if (surface != null) {
+            if (AdbClusterRouter.enabled(this)) appendLog("Test27 cluster renderer=" +
+                (if (AirPlayPersistence.loadAdbClusterRgb(this)) "RGB" else if (clusterSurfaceUsesHolder) "SURFACE" else "TEXTURE") +
+                " stream=111 buffer=1920x720 pictureAdjustments=${!clusterSurfaceUsesHolder}")
             if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute() &&
                 !adbClusterConfigured && controller != null) {
                 ClusterActivityOutput.setStreamActive(false)
                 reconnectAfterLoss("DiLink 4 cluster confirmed; requesting its native stream")
-            } else sink?.setSurface(SCREEN_TYPE_ALT, surface)
+            } else {
+                sink?.setSurface(SCREEN_TYPE_ALT, surface)
+                // A static map may not send another frame after its Surface was recreated.
+                if (clusterSurfaceUsesHolder) sink?.refreshPicture(SCREEN_TYPE_ALT)
+            }
         }
         updateClusterMapShown()
     }
