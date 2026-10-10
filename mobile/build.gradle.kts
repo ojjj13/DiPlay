@@ -17,7 +17,7 @@ android {
         applicationId = "com.shihab.diplay"
         minSdk = 25
         targetSdk = 37
-        versionCode = 35
+        versionCode = 36
         versionName = "0.2.16"
 
     }
@@ -40,7 +40,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".hudtest"
-            versionNameSuffix = "-test27"
+            versionNameSuffix = "-test27.1"
         }
         release {
             optimization {

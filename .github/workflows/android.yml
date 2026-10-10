@@ -24,7 +24,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Unit tests, lint and source-only debug build
         run: ./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :home:testDebugUnitTest :mobile:lintDebug :home:lintDebug :maphost:lintDebug :mobile:assembleDebug :home:assembleDebug :maphost:assembleDebug --stacktrace
-      - name: Verify and collect Test27 APK without authentication
+      - name: Verify and collect Test27.1 APK without authentication
         if: github.ref == 'refs/heads/diagnostic/test27-v0.2.16'
         run: |
           python3 - <<'PYCODE'
@@ -35,14 +35,14 @@ jobs:
               unexpected = [n for n in apk.namelist() if "offline-mfi" in n.lower() or pathlib.PurePosixPath(n).suffix.lower() in blocked]
               assert not unexpected, "Authentication/credential files found in APK"
           pathlib.Path("delivery").mkdir(exist_ok=True)
-          shutil.copyfile(source, "delivery/DiPlay-Test27-source-only.apk")
+          shutil.copyfile(source, "delivery/DiPlay-Test27.1-source-only.apk")
           PYCODE
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify delivery/DiPlay-Test27-source-only.apk
-          sha256sum delivery/DiPlay-Test27-source-only.apk > delivery/SHA256SUMS.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify delivery/DiPlay-Test27.1-source-only.apk
+          sha256sum delivery/DiPlay-Test27.1-source-only.apk > delivery/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/diagnostic/test27-v0.2.16'
         with:
-          name: DiPlay-Test27-source-only
+          name: DiPlay-Test27.1-source-only
           path: delivery/
           retention-days: 14
       - name: Test reports

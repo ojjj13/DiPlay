@@ -4845,6 +4845,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                     appendLine("adbClusterActivityEnabled=${AirPlayPersistence.loadAdbClusterEnabled(appContext)}")
                     appendLine("adbClusterSurfaceViewSaved=${AirPlayPersistence.loadAdbClusterSurfaceView(appContext)} " +
                         "active=${ClusterActivityOutput.activity.get()?.usesSurfaceView}")
+                    appendLine("adbClusterRgbSaved=${AirPlayPersistence.loadAdbClusterRgb(appContext)}")
+                    appendLine(ClusterRgbDiagnostics.report())
                     appendLine("clusterActivityMainTask=${ClusterActivityOutput.mainTaskId} surfaceValid=${ClusterActivityOutput.surface?.isValid}")
                     AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
                         DiagnosticRedactor.redact(line)?.let { appendLine(it) }

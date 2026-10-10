@@ -20,9 +20,8 @@ import javax.microedition.khronos.opengles.GL10
  */
 internal class ClusterVideoRgb(context: Context, private val onPresented: () -> Unit,
     private val onSurface: (Surface?) -> Unit) : GLSurfaceView(context), java.io.Closeable {
-    @Volatile private var closed = false
+    private val frameState = ClusterRgbFrameState()
     @Volatile private var generation = 0
-    @Volatile private var frameAvailable = false
     private var input: Surface? = null
     private var texture: SurfaceTexture? = null
     private var textureId = 0
@@ -31,15 +30,16 @@ internal class ClusterVideoRgb(context: Context, private val onPresented: () -> 
     private val vertices = ByteBuffer.allocateDirect(16 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
         .apply { put(floatArrayOf(-1f,-1f,0f,0f, 1f,-1f,1f,0f, -1f,1f,0f,1f, 1f,1f,1f,1f)); position(0) }
     init {
+        ClusterRgbDiagnostics.reset()
         setEGLContextClientVersion(2)
         setEGLConfigChooser(8, 8, 8, 8, 0, 0)
         holder.setFormat(PixelFormat.RGBA_8888)
         holder.setFixedSize(DiLink4ClusterDisplay.STREAM_WIDTH, DiLink4ClusterDisplay.STREAM_HEIGHT)
         setRenderer(object : Renderer {
             override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-                if (closed || !frameAvailable) return
+                if (!frameState.beginInitialization()) return
+                ClusterRgbDiagnostics.event("EGL context created; initializing input")
                 val currentGeneration = ++generation
-                frameAvailable = false
                 val ids = IntArray(1)
                 GLES20.glGenTextures(1, ids, 0)
                 textureId = ids[0]
@@ -58,14 +58,15 @@ internal class ClusterVideoRgb(context: Context, private val onPresented: () -> 
                 GLES20.glDeleteShader(vertex); GLES20.glDeleteShader(fragment)
                 val next = SurfaceTexture(textureId).apply {
                     setDefaultBufferSize(DiLink4ClusterDisplay.STREAM_WIDTH, DiLink4ClusterDisplay.STREAM_HEIGHT)
-                    setOnFrameAvailableListener { if (!closed) { frameAvailable = true; requestRender() } }
+                    setOnFrameAvailableListener { if (frameState.frameArrived()) { ClusterRgbDiagnostics.received(); requestRender() } }
                 }
                 texture = next
                 val nextSurface = Surface(next)
                 post {
-                    if (closed || generation != currentGeneration) nextSurface.release() else {
+                    if (frameState.isClosed || generation != currentGeneration) nextSurface.release() else {
                         input = nextSurface
                         onSurface(nextSurface)
+                        ClusterRgbDiagnostics.event("decoder input surface published")
                         Log.i("xcertplay-usb", "Test27 cluster RGB bridge ready: external OES -> RGBA8888, identity RGB, opaque alpha")
                     }
                 }
@@ -74,7 +75,7 @@ internal class ClusterVideoRgb(context: Context, private val onPresented: () -> 
                 GLES20.glViewport(0, 0, width, height)
             }
             override fun onDrawFrame(gl: GL10?) {
-                if (closed || !frameAvailable) return
+                if (!frameState.canDraw) return
                 val current = texture ?: return
                 current.updateTexImage(); current.getTransformMatrix(matrix)
                 GLES20.glClearColor(0f, 0f, 0f, 1f); GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
@@ -89,7 +90,8 @@ internal class ClusterVideoRgb(context: Context, private val onPresented: () -> 
                 vertices.position(2); GLES20.glVertexAttribPointer(uv, 2, GLES20.GL_FLOAT, false, 16, vertices)
                 GLES20.glEnableVertexAttribArray(p); GLES20.glEnableVertexAttribArray(uv)
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
-                post { if (!closed) onPresented() }
+                ClusterRgbDiagnostics.drawn()
+                post { if (!frameState.isClosed) onPresented() }
             }
         })
         renderMode = RENDERMODE_WHEN_DIRTY
@@ -106,13 +108,14 @@ internal class ClusterVideoRgb(context: Context, private val onPresented: () -> 
         super.surfaceDestroyed(holder)
     }
     override fun close() {
-        if (closed) return
-        closed = true
+        if (frameState.isClosed) return
+        frameState.close()
         detach()
     }
     private fun detach() {
         generation++
-        frameAvailable = false
+        frameState.resetFrames()
+        ClusterRgbDiagnostics.event("input detached")
         // The host detaches every decoder synchronously before these app-owned objects are released.
         if (input != null) onSurface(null)
         input?.release(); input = null
